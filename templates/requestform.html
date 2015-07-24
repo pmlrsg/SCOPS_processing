@@ -1,0 +1,298 @@
+{% extends "_base.html" %}
+{% block header %}
+<script type="text/javascript" src="static/js/jquery.js"></script>
+<script>
+$( document).ready(function(){
+    console.log('ready');
+});
+</script>
+<style>
+.btn-file {
+    position: relative;
+    overflow: hidden;
+}
+.btn-file input[type=file] {
+    position: absolute;
+    top: 0;
+    right: 0;
+    min-width: 100%;
+    min-height: 100%;
+    font-size: 100px;
+    text-align: right;
+    filter: alpha(opacity=0);
+    opacity: 0;
+    outline: none;
+    background: white;
+    cursor: inherit;
+    display: block;
+}
+</style>
+{% endblock %}
+{% block content %}
+<div class="row">
+<h1>Submit processing job</h1>
+</div>
+<form class="form-horizontal" action="/jobrequestpost/" method="post" enctype="multipart/form-data">
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="well bs-component">
+                <legend>General</legend>
+                <fieldset>
+                    <div class="col-lg-6 has-warning" id="email_section">
+                        <div class="row">
+                            <label for="email" class="col-lg-4 control-label">Email address</label>
+                            <div class="col-lg-6">
+                                <input type="text" class="form-control" name="email" id="email" placeholder="Email" onblur="checkTextField(this);">
+                            </div>
+                        </div>
+                    </div>
+                </fieldset>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="well bs-component">
+                <table class="table table-striped table-hover ">
+                    <thead>
+                        <tr>
+                            <th>Process</th>
+                            <th>Flightline name</th>
+                            <th>Band groups</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for line in flightlines %}
+                        <tr>
+                            <td><input type="checkbox" id="line_checks" name="{{ line }}_line_check" checked=""></td>
+                            <td>{{ line }}</td>
+                            <td>
+                                <table>
+                                    <td>Start </td>
+                                    <td>
+                                        <select class="form-control-small" id="band_start" name="band_start">
+                                            {% for band in bands %}
+                                            <option>{{ band }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </td>
+                                    <td>End</td>
+                                    <td>
+                                        <select class="form-control-small" id="band_stop" name="band_stop">
+                                            {% for band in bands %}
+                                            <option {% if band == band_max %}selected{% endif %}>{{ band }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </td>
+                                </table>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        <tr>
+                            <td><input type="checkbox" id="all_lines_check" name="process_all_lines" checked=""></td>
+                            <td>Process all lines</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="well bs-component">
+                <fieldset>
+                    <legend>Masking</legend>
+                    <div class="form-group">
+                        <div class="col-lg-10">
+                           <div class="checkbox">
+                                <label>
+                                    <input type="checkbox" id="mask_all_check" checked=""> Mask all
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </fieldset>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="well bs-component">
+                <fieldset>
+                    <legend>Geocorrection</legend>
+                    <div class="form-group">
+                        <div class="col-lg-10">
+                            <label>Select elevation model or upload your own</label>
+                            <div class="radio">
+                                <label>
+                                    <input type="radio" name="optionsRadios" id="optionsDemRadios1" value="aster" checked="">
+                                    ASTER
+                                </label>
+                            </div>
+                            <div class="radio">
+                                <label>
+                                    <input type="radio" name="optionsRadios" id="optionsDemRadios2" value="srtm">
+                                    SRTM
+                                </label>
+                            </div>
+                           <div class="radio">
+                                <label>
+                                    <input type="radio" name="optionsRadios" id="optionsDemRadios3" value="upload">
+                                    Upload your own
+                                </label>
+                                <span class="btn btn-primary btn-sm btn-file">
+                                    Browse&hellip;
+                                    <input type="file">
+                                </span>
+                           </div>
+                        </div>
+                    </div>
+                </fieldset>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="well bs-component">
+                <fieldset>
+                    <legend>Projection</legend>
+                    <div class="form-group">
+                        <div class="col-lg-6">
+                            <label>Select Projection</label>
+                            <div class="radio">
+                                <label>
+                                    {% if utmzone %}
+                                    <input type="radio" name="projectionRadios" id="optionsProjRadios3" value="{{ utmzone }}" checked="">
+                                    {{ utmzone }}
+                                    {% else %}
+                                    <input type="radio" name="projectionRadios" id="optionsProjRadios3" value="utm" checked="">
+                                    utm
+                                    {% endif %}
+                                </label>
+                            </div>
+                            {% if uk %}
+                            <div class="radio">
+                                <label>
+                                    <input type="radio" name="projectionRadios" id="optionsProjRadios3" value="UKBNG">
+                                    UKBNG
+                                </label>
+                            </div>
+                            {% endif %}
+                            <div class="radio">
+                                    <div class="form-row">
+                                        <input type="radio" name="projectionRadios" id="optionsProjRadios3" value="proj_string">
+                                        <label for="projStringText" class="control-label">Proj string</label>
+                                        <input class="form-control" type="text" name="projString" id="projStringText" placeholder="proj">
+                                    </div>
+                            </div>
+                        </div>
+                    </div>
+                </fieldset>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="well bs-component">
+                <fieldset>
+                    <legend>Gridding</legend>
+                    <div class="form-group">
+                        <div class="row">
+                            <label for="pixel_size_x" class="col-lg-3 control-label">Pixel Size X:</label>
+                            <div class="col-lg-3">
+                                <select class="col-lg-3 form-control" id="pixel_size_x">
+                                    {% for size in pixel_sizes %}
+                                    <option {% if size == optimal_pixel %}selected{% endif %}>{{ size }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <label for="pixel_size_y" class="col-lg-1 control-label">Y:</label>
+                            <div class="col-lg-3">
+                                <select class="col-lg-3 form-control" id="pixel_size_y">
+                                    {% for size in pixel_sizes %}
+                                    <option {% if size == optimal_pixel %}selected{% endif %}>{{ size }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row">
+                            &nbsp
+                        </div>
+                        <div class="row">
+                            <label for="bound_n" class="col-lg-3 control-label">Bounding N:</label>
+                            <div class="col-lg-3">
+                                <input type="text" class="form-control" id="bound_n" placeholder={{ bounds.n }}>
+                            </div>
+                            <label for="bound_s" class="col-lg-1 control-label">S:</label>
+                            <div class="col-lg-3">
+                                <input type="text" class="form-control" id="bound_s" placeholder={{ bounds.s }}>
+                            </div>
+                            <label for="bound_e" class="col-lg-3 control-label">E:</label>
+                            <div class="col-lg-3">
+                                <input type="text" class="form-control" id="bound_e" placeholder={{ bounds.e }}>
+                            </div>
+                            <label for="bound_w" class="col-lg-1 control-label">W:</label>
+                            <div class="col-lg-3">
+                                <input type="text" class="form-control" id="bound_w" placeholder={{ bounds.w }}>
+                            </div>
+                        </div>
+                        <div class="row">
+                            &nbsp
+                        </div>
+                        <div class="row">
+                            <label class="col-lg-4 control-label">Select interpolation</label>
+                        </div>
+                        <div class="row">
+                            <div class="col-lg-4">
+                            <div class="radio" id="interp_radios">
+                                <label>
+                                    <input type="radio" name="optionsIntRadios" id="optionsIntRadios3" value="nearest" checked="">
+                                    Nearest Neighbour
+                                </label>
+                            </div>
+                            <div class="radio">
+                                <label>
+                                    <input type="radio" name="optionsIntRadios" id="optionsIntRadios3" value="bilinear">
+                                    Bilinear
+                                </label>
+                            </div>
+                            <div class="radio">
+                                <label>
+                                    <input type="radio" name="optionsIntRadios" id="optionsIntRadios3" value="cubic">
+                                    Cubic
+                                </label>
+                            </div>
+                            </div>
+                        </div>
+                    </div>
+                </fieldset>
+            </div>
+        </div>
+    </div>
+    <button id="submit" type="submit" class="btn btn-primary">Submit</button>
+</form>
+<script>
+    $("#all_lines_check").change(function () {
+        $("#line_checks").prop('checked', $(this).prop("checked"));
+    });
+
+    $("#line_checks").change(function () {
+        if ($('#all_lines_check').prop('checked') == true) {
+            $("#all_lines_check").prop('checked', $(this).prop("checked"));
+        }
+    });
+    function checkTextField(field) {
+        if (field.value == '') {
+            $('#email_section').addClass('has-warning');
+        } else if (field.value != '') {
+            $('#email_section').removeClass('has-warning');
+        }
+        if (field.value.indexOf("@") == -1) {
+            $('#email_section').addClass('has-error');
+        } else if (field.value.indexOf("@") != -1) {
+            $('#email_section').removeClass('has-error');
+        }
+        if (field.value.indexOf(".") == -1) {
+            $('#email_section').addClass('has-error');
+        } else if (field.value.indexOf(".") != -1) {
+            $('#email_section').removeClass('has-error');
+        }
+    }
+</script>
+{% endblock %}

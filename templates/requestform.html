@@ -40,6 +40,9 @@ $( document).ready(function(){
                 <fieldset>
                     <div class="col-lg-6 has-warning" id="email_section">
                         <div class="row">
+                            <h5>Project Code: {{ project_code }}</h5>
+                            <h5>Year: {{ year }}</h5>
+                            <h5>Julian Day: {{ julian_day }}</h5>
                             <label for="email" class="col-lg-4 control-label">Email address</label>
                             <div class="col-lg-6">
                                 <input type="text" class="form-control" name="email" id="email" placeholder="Email" onblur="checkTextField(this);">
@@ -70,7 +73,7 @@ $( document).ready(function(){
                                 <table>
                                     <td>Start </td>
                                     <td>
-                                        <select class="form-control-small" id="band_start" name="band_start">
+                                        <select class="form-control-small" id="{{ line }}_band_start" name="{{ line }}_band_start">
                                             {% for band in bands %}
                                             <option>{{ band }}</option>
                                             {% endfor %}
@@ -78,7 +81,7 @@ $( document).ready(function(){
                                     </td>
                                     <td>End</td>
                                     <td>
-                                        <select class="form-control-small" id="band_stop" name="band_stop">
+                                        <select class="form-control-small" id="{{ line }}_band_stop" name="{{ line }}_band_stop">
                                             {% for band in bands %}
                                             <option {% if band == band_max %}selected{% endif %}>{{ band }}</option>
                                             {% endfor %}
@@ -106,7 +109,7 @@ $( document).ready(function(){
                         <div class="col-lg-10">
                            <div class="checkbox">
                                 <label>
-                                    <input type="checkbox" id="mask_all_check" checked=""> Mask all
+                                    <input type="checkbox" id="mask_all_check" name="mask_all_check"  checked=""> Mask all
                                 </label>
                             </div>
                         </div>
@@ -123,19 +126,19 @@ $( document).ready(function(){
                             <label>Select elevation model or upload your own</label>
                             <div class="radio">
                                 <label>
-                                    <input type="radio" name="optionsRadios" id="optionsDemRadios1" value="aster" checked="">
+                                    <input type="radio" name="optionsDemRadios" id="optionsDemRadios1" value="aster" checked="">
                                     ASTER
                                 </label>
                             </div>
                             <div class="radio">
                                 <label>
-                                    <input type="radio" name="optionsRadios" id="optionsDemRadios2" value="srtm">
+                                    <input type="radio" name="optionsDemRadios" id="optionsDemRadios2" value="srtm">
                                     SRTM
                                 </label>
                             </div>
                            <div class="radio">
                                 <label>
-                                    <input type="radio" name="optionsRadios" id="optionsDemRadios3" value="upload">
+                                    <input type="radio" name="optionsDemRadios" id="optionsDemRadios3" value="upload">
                                     Upload your own
                                 </label>
                                 <span class="btn btn-primary btn-sm btn-file">
@@ -196,7 +199,7 @@ $( document).ready(function(){
                         <div class="row">
                             <label for="pixel_size_x" class="col-lg-3 control-label">Pixel Size X:</label>
                             <div class="col-lg-3">
-                                <select class="col-lg-3 form-control" id="pixel_size_x">
+                                <select class="col-lg-3 form-control" id="pixel_size_x" name="pixel_size_x">
                                     {% for size in pixel_sizes %}
                                     <option {% if size == optimal_pixel %}selected{% endif %}>{{ size }}</option>
                                     {% endfor %}
@@ -204,7 +207,7 @@ $( document).ready(function(){
                             </div>
                             <label for="pixel_size_y" class="col-lg-1 control-label">Y:</label>
                             <div class="col-lg-3">
-                                <select class="col-lg-3 form-control" id="pixel_size_y">
+                                <select class="col-lg-3 form-control" id="pixel_size_y" name="pixel_size_y">
                                     {% for size in pixel_sizes %}
                                     <option {% if size == optimal_pixel %}selected{% endif %}>{{ size }}</option>
                                     {% endfor %}
@@ -217,19 +220,19 @@ $( document).ready(function(){
                         <div class="row">
                             <label for="bound_n" class="col-lg-3 control-label">Bounding N:</label>
                             <div class="col-lg-3">
-                                <input type="text" class="form-control" id="bound_n" placeholder={{ bounds.n }}>
+                                <input type="text" class="form-control" id="bound_n" name="bound_n" placeholder={{ bounds.n }}>
                             </div>
                             <label for="bound_s" class="col-lg-1 control-label">S:</label>
                             <div class="col-lg-3">
-                                <input type="text" class="form-control" id="bound_s" placeholder={{ bounds.s }}>
+                                <input type="text" class="form-control" id="bound_s" name="bound_s" placeholder={{ bounds.s }}>
                             </div>
                             <label for="bound_e" class="col-lg-3 control-label">E:</label>
                             <div class="col-lg-3">
-                                <input type="text" class="form-control" id="bound_e" placeholder={{ bounds.e }}>
+                                <input type="text" class="form-control" id="bound_e" name="bound_e" placeholder={{ bounds.e }}>
                             </div>
                             <label for="bound_w" class="col-lg-1 control-label">W:</label>
                             <div class="col-lg-3">
-                                <input type="text" class="form-control" id="bound_w" placeholder={{ bounds.w }}>
+                                <input type="text" class="form-control" id="bound_w" name="bound_w" placeholder={{ bounds.w }}>
                             </div>
                         </div>
                         <div class="row">
@@ -265,6 +268,9 @@ $( document).ready(function(){
             </div>
         </div>
     </div>
+    <input type="hidden" name="julianday" value="{{ julian_day }}">
+    <input type="hidden" name="sortie" value="{{ sortie }}">
+    <input type="hidden" name="year" value="{{ year }}">
     <button id="submit" type="submit" class="btn btn-primary">Submit</button>
 </form>
 <script>

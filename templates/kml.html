@@ -1,0 +1,76 @@
+
+<html>
+   <head>
+      <title>Project Contents</title>
+      <link rel="stylesheet" href="https://code.jquery.com/ui/1.8.11/themes/base/jquery-ui.css">
+      <link rel="stylesheet" href="/styles/nerc_arsf-style.css" type="text/css" />
+      <link rel="icon" href="/images/favicon.gif" type="image/gif" />
+      <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.5.1/jquery.min.js"></script> 
+      <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.11/jquery-ui.min.js"></script>
+      <script>
+         $(function(){$( "#tabs" ).tabs({selected: 0});});
+      </script> 
+   </head>
+   <body>  
+   
+   <div id="logo"><a href="https://www.nerc.ac.uk/"><img src="/images/nerc_logo.png" width="86" height="60" border="0" alt="NERC Homepage" title="NERC Homepage"></a></div>
+   <div id="maintext" class="flowleft">
+      
+      <h2>Project contents</h2>
+      
+      <p>As the processing of the project data progresses more tabs and download links will become available </p>
+      
+      <div id="tabs">
+         <ul>
+         <li><a href="#downloadlink-tab">Download links</a></li>
+         <li><a href="#video-tab">Flight Video</a></li>
+         <!--TABLIST-EAGLEMOSAIC-->
+         <!--TABLIST-HAWKMOSAIC-->
+         <li><a href="#fenixmosaic-tab">Fenix Mosaic</a></li>
+         <!--TABLIST-OWLMOSAIC-->
+         <!--TABLIST-LIDARMOSAIC-->
+         </ul>
+            
+         <div id="downloadlink-tab">
+            <p>Click the following links to access the KML file or quicklook images.</p>
+            <p><a href=RG12_09-2014_088.kml> RG12_09-2014_088.kml </a> - A Google Earth KML file </p>
+            <p><a href=hyperspectral_lev0_jpgs> hyperspectral_lev0_jpgs </a> - Raw hyperspectral quicklooks </p>
+            <p><a href=hyperspectral_lev3_jpgs> hyperspectral_lev3_jpgs </a> - Georeferenced hyperspectral quicklooks </p>
+            <p><a href=hyperspectral_xml> hyperspectral_xml </a> - Human-readable XML meta-data files. </p>
+            <p><a href=lidar_jpgs> lidar_jpgs </a> - LiDAR quicklooks </p>
+            <p><a href=rcd_jpgs> rcd_jpgs </a> - RCD camera quicklooks </p>
+            <p><a href=videos> videos </a> - Full resolution video of flight from web camera jpegs </p>
+            <p><a href=webcam_jpgs> webcam_jpgs </a> - 'Web camera' quicklooks </p>
+         </div>
+         <div id="video-tab" style="text-align: center">
+            <p>This is a video of the flight taken using the low-res 'webcam' associated with the lidar instrument. The camera is looking down.</p>
+            <video controls autoplay width="320" height="256" >
+               <source src="https://arsf-dan.nerc.ac.uk/kml/2014/RG12_09-2014_088/videos/RG12_09-2014_088-webcams-lowres.webm" type="video/webm">
+            <source src="https://arsf-dan.nerc.ac.uk/kml/2014/RG12_09-2014_088/videos/RG12_09-2014_088-webcams-lowres.mp4" type="video/mp4">
+
+              There is a problem with your browser playing this video - it may not support the HTML5 video tag.
+            </video> 
+         </div>         
+         <div id="eaglemosaic-tab">
+<!--eaglemosaic-->
+         </div>
+         <div id="hawkmosaic-tab">
+<!--hawkmosaic-->
+         </div>
+         <div id="fenixmosaic-tab">
+            <p>This is a mosaic of the quicklook images from the Fenix data. Click to see full resolution quicklook.</p>
+            <p><a href="https://arsf-dan.nerc.ac.uk/kml/2014/RG12_09-2014_088/hyperspectral_lev3_jpgs/fenix_mosaic.jpg"> <img src="https://arsf-dan.nerc.ac.uk/kml/2014/RG12_09-2014_088/hyperspectral_lev3_jpgs/fenix_mosaic_thumbnail.jpg" alt="" width="800" /> </a> </p>
+
+         </div>
+         <div id="owlmosaic-tab">
+<!--owlmosaic-->
+         </div>
+         <div id="lidarmosaic-tab">
+<!--lidarmosaic-->
+         </div>
+         
+      </div>
+      <a href="http://localhost:5000/jobrequest?day=88&year=2014&project=RG12_09">processing</a>
+  </div>
+  </body>
+</html>

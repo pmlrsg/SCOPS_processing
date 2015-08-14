@@ -45,7 +45,7 @@ $( document).ready(function(){
                             <h5>Julian Day: {{ julian_day }}</h5>
                             <label for="email" class="col-lg-4 control-label">Email address</label>
                             <div class="col-lg-6">
-                                <input type="text" class="form-control" name="email" id="email" placeholder="Email" onblur="checkTextField(this);">
+                                <input type="text" class="form-control" name="email" id="email" placeholder="Email" onblur="checkTextField(this);" required>
                             </div>
                         </div>
                     </div>
@@ -73,7 +73,7 @@ $( document).ready(function(){
                                 <table>
                                     <td>Start </td>
                                     <td>
-                                        <select class="form-control-small" id="{{ line.name }}_band_start" name="{{ line.name }}_band_start">
+                                        <select class="form-control-small" id="{{ line.name }}_band_start" onchange="checkBandValue('{{ line.name }}_band_start', '{{ line.name }}_band_stop')" name="{{ line.name }}_band_start">
                                             {% for band in line.bands %}
                                             <option>{{ band }}</option>
                                             {% endfor %}
@@ -81,7 +81,7 @@ $( document).ready(function(){
                                     </td>
                                     <td>End</td>
                                     <td>
-                                        <select class="form-control-small" id="{{ line.name }}_band_stop" name="{{ line.name }}_band_stop">
+                                        <select class="form-control-small" id="{{ line.name }}_band_stop" onchange="checkBandValue('{{ line.name }}_band_start', '{{ line.name }}_band_stop')" name="{{ line.name }}_band_stop">
                                             {% for band in line.bands %}
                                             <option {% if band == line.bandsmax %}selected=''{% endif %}>{{ band }}</option>
                                             {% endfor %}
@@ -121,7 +121,16 @@ $( document).ready(function(){
                            <div class="checkbox">
                                 <label>
                                     <input type="checkbox" id="mask_all_check" name="mask_all_check"  checked=""> Mask all
+                                    <input type="checkbox" id="mask_none_check" name="mask_none_check" > Mask none
                                 </label>
+                                <script>
+                                    $("#mask_all_check").change(function () {
+                                        $("#mask_none_check").prop('checked', $(this).prop('checked'));
+                                    });
+                                    $("#mask_none_check").change(function () {
+                                        $("#mask_all_check").prop('checked', $(this).prop('checked'));
+                                    });
+                                </script>
                             </div>
                         </div>
                     </div>
@@ -192,9 +201,9 @@ $( document).ready(function(){
                             {% endif %}
                             <div class="radio">
                                     <div class="form-row">
-                                        <input type="radio" name="projectionRadios" id="optionsProjRadios3" value="proj_string">
+                                        <input type="radio" name="projectionRadios" id="optionsProjRadios3" value="proj_string" disabled="">
                                         <label for="projStringText" class="control-label">Proj string</label>
-                                        <input class="form-control" type="text" name="projString" id="projStringText" placeholder="proj">
+                                        <input class="form-control" type="text" name="projString" id="projStringText" placeholder="proj" disabled="">
                                     </div>
                             </div>
                         </div>
@@ -296,6 +305,12 @@ $( document).ready(function(){
             $('#email_section').addClass('has-error');
         } else if (field.value.indexOf(".") != -1 && field.value.indexOf(".") != -1){
             $('#email_section').removeClass('has-error');
+        }
+    }
+
+    function checkBandValue(band1, band2) {
+        if (document.getElementById(band1).selectedIndex >= document.getElementById(band2).selectedIndex) {
+            document.getElementById(band2).selectedIndex = document.getElementById(band1).selectedIndex;
         }
     }
 </script>

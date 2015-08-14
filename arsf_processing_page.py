@@ -1,3 +1,4 @@
+#! /usr/bin/env python
 from flask import Flask
 from flask import render_template
 from flask import request
@@ -10,15 +11,16 @@ import os
 import utm
 import hdr_files
 import datetime
+import math
 
-CONFIG_OUTPUT = "/data/turkana1/scratch/stgo/web_testing/configs/"
-UPLOAD_FOLDER = "/data/turkana1/scratch/stgo/web_testing/dem_upload/"
+CONFIG_OUTPUT = "/users/rsg/arsf/web_processing/configs/"
+UPLOAD_FOLDER = "/users/rsg/arsf/web_processing/dem_upload/"
 
 app = Flask(__name__)
-app.config['UPLOAD_FOLDER'] = "/users/rsg/stgo/upload_test/"
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 bands = [1,2,3,4,5]
-PIXEL_SIZES = arange(0.5, 1.6, 0.1)
+PIXEL_SIZES = arange(0.5, 7.5, 0.5)
 OPTIMAL_PIXEL = float(1.1)
 
 bounds={
@@ -86,56 +88,59 @@ def jobr_request(name=None):
 @app.route('/progress', methods=['POST'])
 def post():
     requestdict = request.form
-    filename = "test.cfg"
     lines = []
     for key in requestdict:
         if "_line_check" in key:
             lines.append(key.strip("_line_check"))
     lines = sorted(lines)
-    filename = requestdict["project_code"] + '_' + requestdict["year"] + '_' + requestdict["julianday"] + datetime.datetime.now()
+    filename = requestdict["project_code"] + '_' + requestdict["year"] + '_' + requestdict["julianday"] + '_' + datetime.datetime.now().strftime('%Y%m%d%H%M%S')
     config_output(requestdict, lines=lines, filename=filename)
     return render_template('submitted.html')
 
 
 def config_output(requestdict, lines, filename):
     config = ConfigParser.RawConfigParser()
+    config.set('DEFAULT', "julianday", requestdict["julianday"])
+    config.set('DEFAULT', "year", requestdict["year"])
+    config.set('DEFAULT', "sortie", requestdict["sortie"])
+    config.set('DEFAULT', "project_code", requestdict["project_code"])
     config.set('DEFAULT', "projection", requestdict["projectionRadios"])
-    config.set('DEFAULT', "projstring", requestdict["projString"])
+    try:
+        config.set('DEFAULT', "projstring", requestdict["projString"])
+    except:
+        config.set('DEFAULT', "projstring", '')
     config.set('DEFAULT', "dem", requestdict["optionsDemRadios"])
-    config.set('DEFAULT', "bounds", requestdict["bound_n"] + ' ' +
-               requestdict["bound_e"] + ' ' +
-               requestdict["bound_s"] + ' ' +
-               requestdict["bound_w"])
+    config.set('DEFAULT', "bounds", requestdict["bound_n"] + ' ' + requestdict["bound_e"] + ' ' + requestdict["bound_s"] + ' ' + requestdict["bound_w"])
     config.set('DEFAULT', "email", requestdict["email"])
     config.set('DEFAULT', "interpolation", requestdict["optionsIntRadios"])
     config.set('DEFAULT', "pixelsize", requestdict["pixel_size_x"] + ' ' + requestdict["pixel_size_y"])
-    if requestdict["mask_all_check"] is "on":
+    config.set('DEFAULT', "submitted", False)
+    if requestdict["mask_all_check"] in "on":
         masking = "all"
     else:
-        masking = "some"
+        masking = "none"
     config.set('DEFAULT', "masking", masking)
     for line in lines:
         config.add_section(str(line))
-        if requestdict['%s_line_check' % line] is "on" or requestdict['process_all_lines'] is "on":
+        if requestdict['%s_line_check' % line] in "on" or requestdict['process_all_lines'] in "on":
             config.set(str(line), 'process', 'true')
         else:
             config.set(str(line), 'process', 'false')
-        config.set(str(line), 'band_range', requestdict["%s_band_start" % line] + ' - ' + requestdict["%s_band_stop" % line])
-    configfile = open(CONFIG_OUTPUT + filename, 'a')
+        config.set(str(line), 'band_range', requestdict["%s_band_start" % line] + '-' + requestdict["%s_band_stop" % line])
+    configfile = open(CONFIG_OUTPUT + filename +'.cfg', 'a')
     config.write(configfile)
     return 1
 
-# def JobRequestPage(name=None):
-#     utmzone = 12
-#     flightlines = [1,2,3,4,5,6]
-#     uk = True
-#     bands = [1,2,3,4,5,6]
-#     return render_template('requestform.html',
-#                            flightlines=flightlines,
-#                            bands=bands,
-#                            utmzone=utmzone,
-#                            uk=uk,
-#                            name=name)
+def getifov(sensor):
+    if "fenix" in sensor:
+        ifov = 0.001448623
+    if "eagle" in sensor:
+        ifov =  0.000645771823
+    if "hawk" in sensor:
+        ifov = 0.0019362246375
+
+def pixelsize(altitude, sensor):
+    return 2 * altitude * math.tan(getifov(sensor)/2)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0')

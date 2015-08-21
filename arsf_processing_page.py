@@ -12,16 +12,18 @@ import utm
 import hdr_files
 import datetime
 import math
+from arsf_dem import dem_nav_utilities
+import random
 
 CONFIG_OUTPUT = "/users/rsg/arsf/web_processing/configs/"
 UPLOAD_FOLDER = "/users/rsg/arsf/web_processing/dem_upload/"
+WEB_PROCESSING_FOLDER = "/users/rsg/arsf/web_processing/"
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 bands = [1,2,3,4,5]
 PIXEL_SIZES = arange(0.5, 7.5, 0.5)
-OPTIMAL_PIXEL = float(1.1)
 
 bounds={
     'n':40000,
@@ -40,7 +42,7 @@ def kml_page(name=None):
 
 @app.route('/')
 @app.route('/jobrequest', methods=['GET', 'POST'])
-def jobr_request(name=None):
+def job_request(name=None):
     day=request.args["day"]
     year=request.args["year"]
     proj_code=request.args["project"]
@@ -72,12 +74,18 @@ def jobr_request(name=None):
             "bands" : range(1, int(linehdr.bands)+1, 1),
         }
         lines.append(linedict)
+
+    sampled_nav = random.sample(glob.glob(hyper_delivery[0] + "/flightlines/navigation/*_nav_post_processed.bil"), 2)
+    altitude = dem_nav_utilities.get_min_max_from_bil_nav_files(sampled_nav)["altitude"]["min"]
+    sensor = "fenix"
+    pixel = pixelsize(altitude, sensor)
+    pixel = round(pixel * 2) / 2
     lines = sorted(lines, key=lambda line: line["name"])
     return render_template('requestform.html',
                            flightlines=lines,
                            uk = britain,
                            pixel_sizes=PIXEL_SIZES,
-                           optimal_pixel=OPTIMAL_PIXEL,
+                           optimal_pixel=pixel,
                            bounds=bounds,
                            name=name,
                            julian_day=day,
@@ -129,7 +137,25 @@ def config_output(requestdict, lines, filename):
         config.set(str(line), 'band_range', requestdict["%s_band_start" % line] + '-' + requestdict["%s_band_stop" % line])
     configfile = open(CONFIG_OUTPUT + filename +'.cfg', 'a')
     config.write(configfile)
+    os.chmod(configfile, 0664)
     return 1
+
+@app.route('/processing', methods=['GET', 'POST'])
+def processingpage(name=None):
+    folder = request.args["id"]
+    lines = []
+    for line in glob.glob(WEB_PROCESSING_FOLDER + folder + "/status/*"):
+        for l in open(line):
+            status = l.split(' ')[2]
+        line_details = {
+            "name" : os.basepath(line),
+            "status" : status
+        }
+        lines.append(line_details)
+
+    return render_template('processingpage.html',
+                           lines=lines)
+
 
 def getifov(sensor):
     if "fenix" in sensor:
@@ -138,6 +164,7 @@ def getifov(sensor):
         ifov =  0.000645771823
     if "hawk" in sensor:
         ifov = 0.0019362246375
+    return ifov
 
 def pixelsize(altitude, sensor):
     return 2 * altitude * math.tan(getifov(sensor)/2)

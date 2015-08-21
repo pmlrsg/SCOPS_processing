@@ -20,6 +20,8 @@ WEB_MAPPED_OUTPUT = "/mapped/"
 VIEW_VECTOR_FILE = "/sensor_FOV_vectors/%s_fov_fullccd_vectors.bil"
 OSNG_SEPERATION_FILE = "/users/rsg/arsf/dems/ostn02/OSTN02_NTv2.gsb"
 STATUS_DIR = "/status/"
+ERROR_DIR = "/status/"
+LOG_DIR = "/logs/"
 STATUS_FILE = "%s/status/%s_status.txt"
 INITIAL_STATUS = "initialising"
 NAVIGATION_FOLDER = "/flightlines/navigation/"
@@ -28,6 +30,13 @@ NAVIGATION_FOLDER = "/flightlines/navigation/"
 def status_update(status_file, newstage, line):
     open(status_file, 'w').write("%s = %s" % (line, newstage))
 
+def error_write(output_location, error, line_name):
+    error_file = open(output_location + ERROR_DIR + line_name + "_error.txt", 'w')
+    error_file.write(str(error))
+
+def logger(log, line_name, output_location):
+    logfile = open(output_location + LOG_DIR + line_name + "_log.txt", 'a')
+    logfile.write(str(log))
 
 def process_web_hyper_line(config_file, line_name, output_location):
     config = ConfigParser.RawConfigParser()
@@ -79,7 +88,7 @@ def process_web_hyper_line(config_file, line_name, output_location):
 
     projection = line_details["projection"]
 
-    status_update(status_file, "aplmap", line_name)
+    status_update(status_file, "aplmask", line_name)
 
     masked_file = output_location + WEB_MASK_OUTPUT + line_name + "_masked.bil"
 
@@ -88,7 +97,16 @@ def process_web_hyper_line(config_file, line_name, output_location):
     aplmask_cmd.extend(["-mask", maskfile])
     aplmask_cmd.extend(["-output", masked_file])
 
-    common_functions.CallSubprocessOn(aplmask_cmd, redirect=False)
+    try:
+        log = common_functions.CallSubprocessOn(aplmask_cmd, redirect=True)
+        logger(log, line_name, output_location)
+        if not os.path.exists(masked_file):
+            raise Exception, "masked file not output"
+    except Exception, e:
+        status_update(status_file, "ERROR - aplmask", line_name)
+        error_write(output_location, e, line_name)
+        exit(1)
+
 
     status_update(status_file, "aplcorr", line_name)
 
@@ -106,7 +124,15 @@ def process_web_hyper_line(config_file, line_name, output_location):
 
     common_functions.ERROR("you havent added the boresight values!")
 
-    common_functions.CallSubprocessOn(aplcorr_cmd, redirect=False)
+    try:
+        log = common_functions.CallSubprocessOn(aplcorr_cmd, redirect=True)
+        logger(log, line_name, output_location)
+        if not os.path.exists(igm_file):
+            raise Exception, "igm file not output by aplcorr!"
+    except Exception, e:
+        status_update(status_file, "ERROR - aplcorr", line_name)
+        error_write(output_location, e, line_name)
+        exit(1)
 
     if "UTM" in line_details["projection"]:
         zone = line_details["projection"].split(" ")[2]
@@ -118,7 +144,7 @@ def process_web_hyper_line(config_file, line_name, output_location):
         zone = zone[:-1]
 
         projection= pipes.quote("utm_wgs84%s_%s" % (hemisphere, zone))
-    elif line_details["projection"] in "ukbng":
+    elif "UKBNG" in line_details["projection"]:
         projection="osng"
     else:
         print "dunno what the projection is :/"
@@ -136,10 +162,18 @@ def process_web_hyper_line(config_file, line_name, output_location):
     apltran_cmd.extend(["-output", igm_file_transformed])
     if "utm" in projection:
         apltran_cmd.extend(["-outproj", "utm_wgs84%s" % hemisphere, zone])
-    elif "ukbng" in projection:
+    elif "osng" in projection:
         apltran_cmd.extend(["-outproj", "osng", OSNG_SEPERATION_FILE])
 
-    common_functions.CallSubprocessOn(apltran_cmd)
+    try:
+        log = common_functions.CallSubprocessOn(apltran_cmd, redirect=True)
+        logger(log, line_name, output_location)
+        if not os.path.exists(igm_file_transformed):
+            raise Exception, "igm file not output by apltran!"
+    except Exception, e:
+        status_update(status_file, "ERROR - apltran", line_name)
+        error_write(output_location, e, line_name)
+        exit(1)
 
     status_update(status_file, "aplmap", line_name)
 
@@ -155,7 +189,15 @@ def process_web_hyper_line(config_file, line_name, output_location):
     aplmap_cmd.extend(["-interpolation", line_details["interpolation"]])
     aplmap_cmd.extend(["-mapname", mapname])
 
-    common_functions.CallSubprocessOn(aplmap_cmd, redirect=False)
+    try:
+        log = common_functions.CallSubprocessOn(aplmap_cmd, redirect=True)
+        logger(log, line_name, output_location)
+        if not os.path.exists(mapname):
+            raise Exception, "mapped file not output by aplmap!"
+    except Exception, e:
+        status_update(status_file, "ERROR", line_name)
+        error_write(output_location, e, line_name)
+        exit(1)
 
     status_update(status_file, "waiting to zip", line_name)
 
@@ -173,10 +215,26 @@ def process_web_hyper_line(config_file, line_name, output_location):
 
     status_update(status_file, "zipping", line_name)
 
+    with zipfile.ZipFile(mapname + ".zip", 'w', zipfile.ZIP_DEFLATED, allowZip64=True) as zip:
+        zip.write(mapname, os.path.basename(mapname))
+        zip.write(mapname + ".hdr", os.path.basename(mapname + ".hdr"))
 
+    logger("zipping to " + mapname+".zip", line_name, output_location)
 
     status_update(status_file, "complete", line_name)
 
+    all_check = True
+    for status in os.listdir(output_location + STATUS_DIR):
+        for l in open(output_location + STATUS_DIR + status):
+            if "complete" not in l:
+                if "not processing" not in l:
+                    all_check = False
+
+    if all_check:
+        zip_mapped_folder = glob.glob(output_location + WEB_MAPPED_OUTPUT + "*.zip")
+        with zipfile.ZipFile(output_location + WEB_MAPPED_OUTPUT + line_details["project_code"] + '_' + line_details["year"] + jday + '.zip', 'a', zipfile.ZIP_DEFLATED, allowZip64=True) as zip:
+            for zip_mapped in zip_mapped_folder:
+                zip.write(zip_mapped, os.path.basename(zip_mapped))
 
 if __name__=='__main__':
    #Get the input arguments
@@ -204,4 +262,4 @@ if __name__=='__main__':
    args = parser.parse_args()
 
 
-   process_web_hyper_line(args.config, args.line, args.sensor, args.output)
+   process_web_hyper_line(args.config, args.line, args.output)

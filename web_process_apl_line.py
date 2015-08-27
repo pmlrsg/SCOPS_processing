@@ -5,13 +5,9 @@ import argparse
 import os
 import ConfigParser
 import common_functions
-import datetime
-import hdr_files
 import folder_structure
 import glob
-import fileinput
 import zipfile
-import subprocess
 import pipes
 
 WEB_MASK_OUTPUT = "/level1b/"

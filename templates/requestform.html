@@ -6,31 +6,10 @@ $( document).ready(function(){
     console.log('ready');
 });
 </script>
-<style>
-.btn-file {
-    position: relative;
-    overflow: hidden;
-}
-.btn-file input[type=file] {
-    position: absolute;
-    top: 0;
-    right: 0;
-    min-width: 100%;
-    min-height: 100%;
-    font-size: 100px;
-    text-align: right;
-    filter: alpha(opacity=0);
-    opacity: 0;
-    outline: none;
-    background: white;
-    cursor: inherit;
-    display: block;
-}
-</style>
 {% endblock %}
 {% block content %}
 <div class="row">
-<h1>Submit processing job</h1>
+<h1>Submit processing job for Project Code: {{ project_code }} Julian Day: {{ julian_day }} Year: {{ year }} </h1>
 </div>
 <form class="form-horizontal" action="/progress" method="post" enctype="multipart/form-data">
     <div class="row">
@@ -38,14 +17,25 @@ $( document).ready(function(){
             <div class="well bs-component">
                 <legend>General</legend>
                 <fieldset>
-                    <div class="col-lg-6 has-warning" id="email_section">
-                        <div class="row">
-                            <h5>Project Code: {{ project_code }}</h5>
-                            <h5>Year: {{ year }}</h5>
-                            <h5>Julian Day: {{ julian_day }}</h5>
-                            <label for="email" class="col-lg-4 control-label">Email address</label>
-                            <div class="col-lg-6">
-                                <input type="text" class="form-control" name="email" id="email" placeholder="Email" onblur="checkTextField(this);" required>
+                    <div class="col-lg-15 has-warning" id="email_section">
+                        <div class="form-row">
+                            <div class="col-md-6">
+                                <p>
+                                    This is the job request page for day {{ julian_day }}, it can be used to create processing requests for the ARSF-DAN grid. The system will aim to get data to you as quickly as possible however timings will depend on system load. Most options have been preset with optimum values where appropriate, once your jobs have completed their processing you will receive an email detailing download instructions.
+                                </p>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-row">
+                                    <p>Your data will be sent to this email address so please be sure it is correct and you have access to it!</p>
+                                </div>
+                                <div class="form-row">
+                                    <div class="col-lg-3">
+                                        <label for="email" class="control-label">Email address</label>
+                                    </div>
+                                    <div class="col-lg-5">
+                                        <input type="text" class="form-control" name="email" id="email" placeholder="Email" onblur="checkEmailField(this);" required>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -59,7 +49,7 @@ $( document).ready(function(){
                 <table class="table table-striped table-hover" id="line_checks_container">
                     <thead>
                         <tr>
-                            <th>Process</th>
+                            <th><input type="checkbox" id="all_lines_check" name="process_all_lines" checked=""> Process</th>
                             <th>Flightline name</th>
                             <th>Band groups</th>
                         </tr>
@@ -91,10 +81,6 @@ $( document).ready(function(){
                             </td>
                         </tr>
                         {% endfor %}
-                        <tr>
-                            <td><input type="checkbox" id="all_lines_check" name="process_all_lines" checked=""></td>
-                            <td>Process all lines</td>
-                        </tr>
                     </tbody>
                     <script>
                         $("#all_lines_check").change(function () {
@@ -117,18 +103,29 @@ $( document).ready(function(){
                 <fieldset>
                     <legend>Masking</legend>
                     <div class="form-group">
-                        <div class="col-lg-10">
+                        <div>
                            <div class="checkbox">
+                                <p>Selecting "mask all" will apply bad pixel masking techniques. For a full explanation of the masking techniques that will be used see the masking <a href="https://arsf-dan.nerc.ac.uk/trac/wiki/FAQ/aplmask">wiki page</a>.</p>
+                                <div class="row">
+                                    <div class="col-lg-1">
+                                    </div>
+                                    <div class="col-lg-5">
                                 <label>
                                     <input type="checkbox" id="mask_all_check" name="mask_all_check"  checked=""> Mask all
+                                </label>
+                                </div>
+                                <div class="row">
+                                <label>
                                     <input type="checkbox" id="mask_none_check" name="mask_none_check" > Mask none
                                 </label>
+                                </div>
+                                    </div>
                                 <script>
                                     $("#mask_all_check").change(function () {
-                                        $("#mask_none_check").prop('checked', $(this).prop('checked'));
+                                        $("#mask_none_check").prop('checked', false);
                                     });
                                     $("#mask_none_check").change(function () {
-                                        $("#mask_all_check").prop('checked', $(this).prop('checked'));
+                                        $("#mask_all_check").prop('checked', false);
                                     });
                                 </script>
                             </div>
@@ -142,7 +139,8 @@ $( document).ready(function(){
                 <fieldset>
                     <legend>Geocorrection</legend>
                     <div class="form-group">
-                        <div class="col-lg-10">
+                        <div class="col-lg-12">
+                            <p>Set the height model to use for geocorrection, more information can be found about ASTER and SRTM at their respective websites. If uploading your own file please refer <a href="https://arsf-dan.nerc.ac.uk/trac/wiki/FAQ/apldemformat">here</a> for format information.</p>
                             <label>Select elevation model or upload your own</label>
                             <div class="radio">
                                 <label>
@@ -158,10 +156,10 @@ $( document).ready(function(){
                             </div>
                            <div class="radio">
                                 <label>
-                                    <input type="radio" name="optionsDemRadios" id="optionsDemRadios3" value="upload">
+                                    <input type="radio" name="optionsDemRadios" id="optionsDemRadios3" value="upload" disabled="">
                                     Upload your own
                                 </label>
-                                <span class="btn btn-primary btn-sm btn-file">
+                                <span class="btn btn-default btn-sm btn-file" disabled="">
                                     Browse&hellip;
                                     <input type="file">
                                 </span>
@@ -178,8 +176,9 @@ $( document).ready(function(){
                 <fieldset>
                     <legend>Projection</legend>
                     <div class="form-group">
-                        <div class="col-lg-6">
+                        <div class="col-lg-12">
                             <label>Select Projection</label>
+                            <p>Choose your output projection format, or specify a PROJ.4 string. The correct UTM grid zone has been preselected for you.</p>
                             <div class="radio">
                                 <label>
                                     {% if utmzone %}
@@ -216,71 +215,79 @@ $( document).ready(function(){
                 <fieldset>
                     <legend>Gridding</legend>
                     <div class="form-group">
-                        <div class="row">
-                            <label for="pixel_size_x" class="col-lg-3 control-label">Pixel Size X:</label>
-                            <div class="col-lg-3">
-                                <select class="col-lg-3 form-control" id="pixel_size_x" name="pixel_size_x">
-                                    {% for size in pixel_sizes %}
-                                    <option {% if size == optimal_pixel %}selected{% endif %}>{{ size }}</option>
-                                    {% endfor %}
-                                </select>
+                        <div class="col-lg-12">
+                            <div class="form-row">
+
+                                <p>Select your pixel size, note that the size of pixels will affect output file size. The optimum size for the altitude of your data has already been selected.</p>
+                                <label for="pixel_size_x" class="col-lg-3 control-label">Pixel Size X:</label>
+                                <div class="col-lg-3">
+                                    <select class="col-lg-3 form-control" id="pixel_size_x" name="pixel_size_x">
+                                        {% for size in pixel_sizes %}
+                                        <option {% if size == optimal_pixel %}selected{% endif %}>{{ size }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <label for="pixel_size_y" class="col-lg-1 control-label">Y:</label>
+                                <div class="col-lg-3">
+                                    <select class="col-lg-3 form-control" id="pixel_size_y" name="pixel_size_y">
+                                        {% for size in pixel_sizes %}
+                                        <option {% if size == optimal_pixel %}selected{% endif %}>{{ size }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                </div>
+                            <div class="row">
+                                <p>&nbsp</p>
                             </div>
-                            <label for="pixel_size_y" class="col-lg-1 control-label">Y:</label>
-                            <div class="col-lg-3">
-                                <select class="col-lg-3 form-control" id="pixel_size_y" name="pixel_size_y">
-                                    {% for size in pixel_sizes %}
-                                    <option {% if size == optimal_pixel %}selected{% endif %}>{{ size }}</option>
-                                    {% endfor %}
-                                </select>
+                            <div class="form-row">
+                                <p>Input a bounding box for data processing, this must be inside the data coverage area.</p>
+                                <label>Bounding</label>
+                                <div class="row">
+                                    <label for="bound_n" class="col-lg-1 control-label">N:</label>
+                                    <div class="col-lg-5">
+                                        <input type="number" class="form-control" id="bound_n" name="bound_n" value={{ bounds.n }}>
+                                    </div>
+                                    <label for="bound_s" class="col-lg-1 control-label">S:</label>
+                                    <div class="col-lg-5">
+                                        <input type="number" class="form-control" id="bound_s" name="bound_s" value={{ bounds.s }}>
+                                    </div>
+                                    <label for="bound_e" class="col-lg-1 control-label">E:</label>
+                                    <div class="col-lg-5">
+                                        <input type="number" class="form-control" id="bound_e" name="bound_e" value={{ bounds.e }}>
+                                    </div>
+                                    <label for="bound_w" class="col-lg-1 control-label">W:</label>
+                                    <div class="col-lg-5">
+                                        <input type="number" class="form-control" id="bound_w" name="bound_w" value={{ bounds.w }}>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                        <div class="row">
-                            &nbsp
-                        </div>
-                        <div class="row">
-                            <label for="bound_n" class="col-lg-3 control-label">Bounding N:</label>
-                            <div class="col-lg-3">
-                                <input type="text" class="form-control" id="bound_n" name="bound_n" value={{ bounds.n }}>
+                            <div class="row">
+                                &nbsp
                             </div>
-                            <label for="bound_s" class="col-lg-1 control-label">S:</label>
-                            <div class="col-lg-3">
-                                <input type="text" class="form-control" id="bound_s" name="bound_s" value={{ bounds.s }}>
+                            <div class="row">
+                                <label class="col-lg-4 control-label">Select interpolation</label>
                             </div>
-                            <label for="bound_e" class="col-lg-3 control-label">E:</label>
-                            <div class="col-lg-3">
-                                <input type="text" class="form-control" id="bound_e" name="bound_e" value={{ bounds.e }}>
-                            </div>
-                            <label for="bound_w" class="col-lg-1 control-label">W:</label>
-                            <div class="col-lg-3">
-                                <input type="text" class="form-control" id="bound_w" name="bound_w" value={{ bounds.w }}>
-                            </div>
-                        </div>
-                        <div class="row">
-                            &nbsp
-                        </div>
-                        <div class="row">
-                            <label class="col-lg-4 control-label">Select interpolation</label>
-                        </div>
-                        <div class="row">
-                            <div class="col-lg-4">
-                            <div class="radio" id="interp_radios">
-                                <label>
-                                    <input type="radio" name="optionsIntRadios" id="optionsIntRadios3" value="nearest" checked="">
-                                    Nearest Neighbour
-                                </label>
-                            </div>
-                            <div class="radio">
-                                <label>
-                                    <input type="radio" name="optionsIntRadios" id="optionsIntRadios3" value="bilinear">
-                                    Bilinear
-                                </label>
-                            </div>
-                            <div class="radio">
-                                <label>
-                                    <input type="radio" name="optionsIntRadios" id="optionsIntRadios3" value="cubic">
-                                    Cubic
-                                </label>
-                            </div>
+                            <div class="row">
+                                <div class="col-lg-4">
+                                <div class="radio" id="interp_radios">
+                                    <label>
+                                        <input type="radio" name="optionsIntRadios" id="optionsIntRadios3" value="nearest" checked="">
+                                        Nearest Neighbour
+                                    </label>
+                                </div>
+                                <div class="radio">
+                                    <label>
+                                        <input type="radio" name="optionsIntRadios" id="optionsIntRadios3" value="bilinear">
+                                        Bilinear
+                                    </label>
+                                </div>
+                                <div class="radio">
+                                    <label>
+                                        <input type="radio" name="optionsIntRadios" id="optionsIntRadios3" value="cubic">
+                                        Cubic
+                                    </label>
+                                </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -295,7 +302,7 @@ $( document).ready(function(){
     <button id="submit" type="submit" class="btn btn-primary">Submit</button>
 </form>
 <script>
-    function checkTextField(field) {
+    function checkEmailField(field) {
         if (field.value == '') {
             $('#email_section').addClass('has-warning');
         } else if (field.value != '') {
@@ -305,6 +312,12 @@ $( document).ready(function(){
             $('#email_section').addClass('has-error');
         } else if (field.value.indexOf(".") != -1 && field.value.indexOf(".") != -1){
             $('#email_section').removeClass('has-error');
+        }
+    }
+
+    function checkBoundingText(field) {
+        if (field.value == '') {
+
         }
     }
 

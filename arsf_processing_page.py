@@ -123,9 +123,13 @@ def config_output(requestdict, lines, filename):
     config.set('DEFAULT', "interpolation", requestdict["optionsIntRadios"])
     config.set('DEFAULT', "pixelsize", requestdict["pixel_size_x"] + ' ' + requestdict["pixel_size_y"])
     config.set('DEFAULT', "submitted", False)
-    if requestdict["mask_all_check"] in "on":
-        masking = "all"
-    else:
+    print requestdict
+    try:
+        if requestdict["mask_all_check"] in "on":
+            masking = "all"
+        else:
+            masking = "none"
+    except:
         masking = "none"
     config.set('DEFAULT', "masking", masking)
     for line in lines:
@@ -137,7 +141,7 @@ def config_output(requestdict, lines, filename):
         config.set(str(line), 'band_range', requestdict["%s_band_start" % line] + '-' + requestdict["%s_band_stop" % line])
     configfile = open(CONFIG_OUTPUT + filename +'.cfg', 'a')
     config.write(configfile)
-    os.chmod(configfile, 0664)
+    os.chmod(CONFIG_OUTPUT + filename +'.cfg', 0664)
     return 1
 
 @app.route('/processing', methods=['GET', 'POST'])
@@ -161,7 +165,7 @@ def getifov(sensor):
     if "fenix" in sensor:
         ifov = 0.001448623
     if "eagle" in sensor:
-        ifov =  0.000645771823
+        ifov = 0.000645771823
     if "hawk" in sensor:
         ifov = 0.0019362246375
     return ifov

@@ -107,18 +107,18 @@ $( document).ready(function(){
                            <div class="checkbox">
                                 <p>Selecting "mask all" will apply bad pixel masking techniques. For a full explanation of the masking techniques that will be used see the masking <a href="https://arsf-dan.nerc.ac.uk/trac/wiki/FAQ/aplmask">wiki page</a>.</p>
                                 <div class="row">
-                                    <div class="col-lg-1">
+                                    <div class="col-lg-6">
+                                        <div class="col-lg-6">
+                                        <label>
+                                            <input type="checkbox" id="mask_all_check" name="mask_all_check"  checked=""> Mask all
+                                        </label>
+                                        </div>
+                                        <div class="col-lg-6">
+                                        <label>
+                                            <input type="checkbox" id="mask_none_check" name="mask_none_check" > Mask none
+                                        </label>
+                                        </div>
                                     </div>
-                                    <div class="col-lg-5">
-                                <label>
-                                    <input type="checkbox" id="mask_all_check" name="mask_all_check"  checked=""> Mask all
-                                </label>
-                                </div>
-                                <div class="row">
-                                <label>
-                                    <input type="checkbox" id="mask_none_check" name="mask_none_check" > Mask none
-                                </label>
-                                </div>
                                     </div>
                                 <script>
                                     $("#mask_all_check").change(function () {
@@ -240,24 +240,24 @@ $( document).ready(function(){
                                 <p>&nbsp</p>
                             </div>
                             <div class="form-row">
-                                <p>Input a bounding box for data processing, this must be inside the data coverage area.</p>
+                                <p>Input a bounding box for data processing, this must be inside the data coverage area. Default values cover your flightline area so only change this if you want to subset the data.</p>
                                 <label>Bounding</label>
                                 <div class="row">
                                     <label for="bound_n" class="col-lg-1 control-label">N:</label>
-                                    <div class="col-lg-5">
-                                        <input type="number" class="form-control" id="bound_n" name="bound_n" value={{ bounds.n }}>
+                                    <div class="col-lg-5" id="bound_n_cont">
+                                        <input type="number" pattern="[1-9]" class="form-control" id="bound_n" name="bound_n" onblur="checkBoundingText(this)" value={{ bounds.n }} >
                                     </div>
                                     <label for="bound_s" class="col-lg-1 control-label">S:</label>
-                                    <div class="col-lg-5">
-                                        <input type="number" class="form-control" id="bound_s" name="bound_s" value={{ bounds.s }}>
+                                    <div class="col-lg-5" id="bound_s_cont">
+                                        <input type="number" pattern="[1-9]"  class="form-control" id="bound_s" name="bound_s" onblur="checkBoundingText(this)" value={{ bounds.s }}>
                                     </div>
                                     <label for="bound_e" class="col-lg-1 control-label">E:</label>
-                                    <div class="col-lg-5">
-                                        <input type="number" class="form-control" id="bound_e" name="bound_e" value={{ bounds.e }}>
+                                    <div class="col-lg-5" id="bound_e_cont">
+                                        <input type="number" pattern="[1-9]"  class="form-control" id="bound_e" name="bound_e" onblur="checkBoundingText(this)" value={{ bounds.e }}>
                                     </div>
-                                    <label for="bound_w" class="col-lg-1 control-label">W:</label>
-                                    <div class="col-lg-5">
-                                        <input type="number" class="form-control" id="bound_w" name="bound_w" value={{ bounds.w }}>
+                                    <label for="bound_w" pattern="[1-9]" class="col-lg-1 control-label">W:</label>
+                                    <div class="col-lg-5" id="bound_w_cont">
+                                        <input type="number" pattern="[1-9]" class="form-control" id="bound_w" name="bound_w" onblur="checkBoundingText(this)" value={{ bounds.w }}>
                                     </div>
                                 </div>
                             </div>
@@ -316,8 +316,27 @@ $( document).ready(function(){
     }
 
     function checkBoundingText(field) {
-        if (field.value == '') {
-
+        if (isNaN(field.value) == true || field.value == '') {
+            document.getElementById(field.id + '_cont').classList.add('has-error');
+        } else if (isNaN(field.value) != true) {
+            document.getElementById(field.id + '_cont').classList.remove('has-error');
+            if (field.id.indexOf('bound_n') != -1 || field.id.indexOf('bound_s') != -1) {
+                if (parseFloat(document.getElementById('bound_n').value) < parseFloat(document.getElementById('bound_s').value)) {
+                    document.getElementById('bound_n' + '_cont').classList.add('has-error');
+                    document.getElementById('bound_s' + '_cont').classList.add('has-error');
+                } else if (parseFloat(document.getElementById('bound_n').value) > parseFloat(document.getElementById('bound_s').value)) {
+                    document.getElementById('bound_n' + '_cont').classList.remove('has-error');
+                    document.getElementById('bound_s' + '_cont').classList.remove('has-error');
+                }
+            } else if (field.id.indexOf('bound_e') != -1 || field.id.indexOf('bound_w') != -1) {
+                if (parseFloat(document.getElementById('bound_e').value) < parseFloat(document.getElementById('bound_w').value)) {
+                    document.getElementById('bound_w' + '_cont').classList.add('has-error');
+                    document.getElementById('bound_e' + '_cont').classList.add('has-error');
+                } else if (parseFloat(document.getElementById('bound_e').value) > parseFloat(document.getElementById('bound_w').value)) {
+                    document.getElementById('bound_w' + '_cont').classList.remove('has-error');
+                    document.getElementById('bound_e' + '_cont').classList.remove('has-error');
+                }
+            }
         }
     }
 

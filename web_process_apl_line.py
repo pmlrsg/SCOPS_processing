@@ -9,6 +9,9 @@ import folder_structure
 import glob
 import zipfile
 import pipes
+import smtplib
+from email.mime.text import MIMEText
+
 
 WEB_MASK_OUTPUT = "/level1b/"
 WEB_IGM_OUTPUT = "/igm/"
@@ -21,7 +24,38 @@ LOG_DIR = "/logs/"
 STATUS_FILE = "%s/status/%s_status.txt"
 INITIAL_STATUS = "initialising"
 NAVIGATION_FOLDER = "/flightlines/navigation/"
+SEND_EMAIL = "arsf-processing@pml.ac.uk"
+ERROR_EMAIL = "arsf-code@pml.ac.uk"
 
+def send_email(message, receive, send, subject):
+    msg = MIMEText(message)
+    msg['From'] = send
+    msg['To'] = receive
+    msg['Subject'] = subject
+
+    sender = smtplib.SMTP('localhost')
+    sender.sendmail(send, [receive], msg.as_string())
+
+def email_error(stage, line, error, processing_folder):
+    message = "Processing has failed on line %s at stage %s due to:\n\n" \
+            "%s\n\n" \
+            "The processing is contained in folder %s\n\n" \
+            "Once the issue has been resolved update the relevant status file to state either 'complete' or 'waiting to zip' (dependant on what you've done)"
+
+    message = message % (line, stage, error, processing_folder)
+    send_email(message, SEND_EMAIL, ERROR_EMAIL, processing_folder + " ERROR")
+
+def email_PI(pi_email, output_zip, output_location):
+    message = "Processing is complete for your order request %s, you can now download the data from the following location:" \
+              "" \
+              "%s" \
+              "" \
+              "The data will be available for a total of two weeks, however this may be extended if requested. If you identify any problems with your data or have issues downloading the data please contact ARSF staff at arsf-processing@pml.ac.uk." \
+              "" \
+              "Regards," \
+              "ARSF" % output_zip
+
+    send_email(message, pi_email, SEND_EMAIL, output_location + " order complete")
 
 def status_update(status_file, newstage, line):
     open(status_file, 'w').write("%s = %s" % (line, newstage))
@@ -115,10 +149,6 @@ def process_web_hyper_line(config_file, line_name, output_location):
     aplcorr_cmd.extend(["-vvfile", hyper_delivery + VIEW_VECTOR_FILE % sensor])
     aplcorr_cmd.extend(["-dem", dem])
     aplcorr_cmd.extend(["-igmfile", igm_file])
-
-    #TODO add boresight stuff
-
-    common_functions.ERROR("you havent added the boresight values!")
 
     try:
         log = common_functions.CallSubprocessOn(aplcorr_cmd, redirect=True)
@@ -231,6 +261,7 @@ def process_web_hyper_line(config_file, line_name, output_location):
         with zipfile.ZipFile(output_location + WEB_MAPPED_OUTPUT + line_details["project_code"] + '_' + line_details["year"] + jday + '.zip', 'a', zipfile.ZIP_DEFLATED, allowZip64=True) as zip:
             for zip_mapped in zip_mapped_folder:
                 zip.write(zip_mapped, os.path.basename(zip_mapped))
+        email_PI(config["email"], output_location + WEB_MAPPED_OUTPUT + line_details["project_code"] + '_' + line_details["year"] + jday + '.zip', output_location)
 
 if __name__=='__main__':
    #Get the input arguments

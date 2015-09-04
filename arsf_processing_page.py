@@ -22,14 +22,14 @@ WEB_PROCESSING_FOLDER = "/users/rsg/arsf/web_processing/"
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-bands = [1,2,3,4,5]
+bands = [1, 2, 3, 4, 5]
 PIXEL_SIZES = arange(0.5, 7.5, 0.5)
 
-bounds={
-    'n':40000,
-    's':20000,
-    'e':60000,
-    'w':40000
+bounds = {
+    'n': 40000,
+    's': 20000,
+    'e': 60000,
+    'w': 40000
 }
 
 @app.route('/theme')
@@ -50,7 +50,12 @@ def job_request(name=None):
         sortie = request.args["sortie"]
     except:
         sortie = ''
+
     folder = folder_structure.FolderStructure(year=year, jday=str(day), projectCode=proj_code, fletter=sortie)
+    if folder.projPath == os.getcwd():
+        #TODO make this give a better message in a html doc
+        return "he's dead jim"
+
     hyper_delivery = glob.glob(folder.projPath + '/delivery/*hyperspectral*')
     projxml = etree.parse(glob.glob(hyper_delivery[0] + '/project_information/*project.xml')[0]).getroot()
     bounds={
@@ -63,7 +68,7 @@ def job_request(name=None):
     if utmzone[0] in [29, 30, 31] and utmzone[1] in ['U', 'V']:
         britain = True
     else:
-        britain=False
+        britain = False
     line_hdrs = [f for f in glob.glob(hyper_delivery[0] + '/flightlines/level1b/*.bil.hdr') if "mask" not in f]
     lines = []
     for line in line_hdrs:

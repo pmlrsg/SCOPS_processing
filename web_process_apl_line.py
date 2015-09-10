@@ -84,11 +84,11 @@ def process_web_hyper_line(config_file, line_name, output_location):
         jday = line_details["julianday"]
 
     if line_name[:1] in "f":
-        sensor="fenix"
+        sensor = "fenix"
     elif line_name[:1] in "h":
-        sensor="hawk"
+        sensor = "hawk"
     elif line_name[:1] in "e":
-        sensor="eagle"
+        sensor = "eagle"
 
     folder = folder_structure.FolderStructure(year=line_details["year"],
                                               jday=jday,

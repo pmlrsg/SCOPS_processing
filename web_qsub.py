@@ -80,6 +80,7 @@ def web_qsub(config, local=False, local_threaded=False, output=None):
                                                      bil_navigation=nav_folder)
 
     config_file.set('DEFAULT', "dem_name", dem_name)
+    config_file.set('DEFAULT', "submitted", True)
     config_file.write(open(config, 'w'))
 
     for line in lines:

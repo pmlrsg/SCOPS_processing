@@ -16,6 +16,7 @@ from arsf_dem import dem_nav_utilities
 import random
 import math
 import projection
+import web_process_apl_line
 
 CONFIG_OUTPUT = "/users/rsg/arsf/web_processing/configs/"
 UPLOAD_FOLDER = "/users/rsg/arsf/web_processing/dem_upload/"
@@ -24,6 +25,7 @@ KMLPASS = "/users/rsg/arsf/usr/share/kmlpasswords.csv"
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+#app.config['SERVER_NAME'] = "arsf.web.processor:5001"
 
 bands = [1, 2, 3, 4, 5]
 PIXEL_SIZES = arange(0.5, 7.5, 0.5)
@@ -35,6 +37,15 @@ bounds = {
     'w': 40000
 }
 
+def confirm_email(config_name, project, email):
+    confirmation_link = "http://pmpc1319:5001/confirm/%s?proj=%s" % (config_name, project)
+
+    message = "Please confirm your email with the link below:\n" \
+              "\n" \
+              "<a href='%s'>%s</a>\n" % (confirmation_link, confirmation_link)
+
+    web_process_apl_line.send_email(message, email, "ARSF confirm email")
+
 def check_auth(username, password, projcode):
     """This function is called to check if a username /
     password combination is valid.
@@ -44,7 +55,6 @@ def check_auth(username, password, projcode):
         username_auth, password_auth = pair.strip("\n").split(",")
         #print username, password, projcode, username_auth, password_auth
         if username == username_auth and password == password_auth and projcode == username_auth:
-            print "authed!"
             auth = True
         elif username == "arsf_admin" and password == "supersecret":
             auth = True
@@ -61,7 +71,11 @@ def requires_auth(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         auth = request.authorization
-        if not auth or not check_auth(auth.username, auth.password, request.args["project"]):
+        try:
+            project = request.args["project"]
+        except:
+            project = request.form["project"]
+        if not auth or not check_auth(auth.username, auth.password, project):
             return authenticate()
         return f(*args, **kwargs)
     return decorated
@@ -115,17 +129,23 @@ def download(projfolder):
     return send_from_directory(directory=os.path.dirname(download_file), filename=os.path.basename(download_file))
 
 
-@app.route('/confirm/<string:projnum>', methods=['GET', 'POST'])
-def confirm_request(projnum):
+@app.route('/confirm/<path:configname>', methods=['GET', 'POST'])
+@requires_auth
+def confirm_request(configname):
     """
     Receives request from user email which will then confirm the email address used
 
-    :param projnum: the project name/config file name that needs to be updated
-    :type projnum: str
+    :param configname: the project name/config file name that needs to be updated
+    :type configname: str
 
     :return: string
     """
+    configpath = CONFIG_OUTPUT + configname
     #TODO make this update the config and return a better message
+    config_file = ConfigParser.RawConfigParser()
+    config_file.read(configpath)
+    config_file.set('DEFAULT', "confirmed", True)
+    config_file.write(config_file)
     return "confirmed"
 
 
@@ -252,7 +272,7 @@ def progress():
             if "_line_check" in key:
                 lines.append(key.strip("_line_check"))
         lines = sorted(lines)
-        filename = requestdict["project_code"] + '_' + requestdict["year"] + '_' + requestdict["julianday"] + '_' + datetime.datetime.now().strftime('%Y%m%d%H%M%S')
+        filename = requestdict["project"] + '_' + requestdict["year"] + '_' + requestdict["julianday"] + '_' + datetime.datetime.now().strftime('%Y%m%d%H%M%S')
         config_output(requestdict, lines=lines, filename=filename)
         return render_template('submitted.html')
     else:
@@ -280,7 +300,7 @@ def config_output(requestdict, lines, filename):
     config.set('DEFAULT', "julianday", requestdict["julianday"])
     config.set('DEFAULT', "year", requestdict["year"])
     config.set('DEFAULT', "sortie", requestdict["sortie"])
-    config.set('DEFAULT', "project_code", requestdict["project_code"])
+    config.set('DEFAULT', "project_code", requestdict["project"])
     config.set('DEFAULT', "projection", requestdict["projectionRadios"])
     try:
         config.set('DEFAULT', "projstring", requestdict["projString"])
@@ -292,6 +312,7 @@ def config_output(requestdict, lines, filename):
     config.set('DEFAULT', "interpolation", requestdict["optionsIntRadios"])
     config.set('DEFAULT', "pixelsize", requestdict["pixel_size_x"] + ' ' + requestdict["pixel_size_y"])
     config.set('DEFAULT', "submitted", False)
+    config.set('DEFAULT', "confirmed", False)
     print requestdict
     try:
         if requestdict["mask_all_check"] in "on":
@@ -311,6 +332,7 @@ def config_output(requestdict, lines, filename):
     configfile = open(CONFIG_OUTPUT + filename +'.cfg', 'a')
     config.write(configfile)
     os.chmod(CONFIG_OUTPUT + filename +'.cfg', 0664)
+    confirm_email(filename, requestdict["project"], requestdict["email"])
     return 1
 
 
@@ -364,4 +386,7 @@ def pixelsize(altitude, sensor):
 
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', threaded=True, port=5001)
+    app.run(debug=True,
+            host='0.0.0.0',
+            threaded=True,
+            port=5001)

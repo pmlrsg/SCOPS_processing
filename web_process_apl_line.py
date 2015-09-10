@@ -27,7 +27,7 @@ NAVIGATION_FOLDER = "/flightlines/navigation/"
 SEND_EMAIL = "arsf-processing@pml.ac.uk"
 ERROR_EMAIL = "arsf-code@pml.ac.uk"
 
-def send_email(message, receive, send, subject):
+def send_email(message, receive, subject, send=SEND_EMAIL):
     msg = MIMEText(message)
     msg['From'] = send
     msg['To'] = receive

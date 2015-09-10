@@ -11,9 +11,12 @@ To get to version 1:
     * semi done, needs to send something to the PI for access
 2. get email confirmation/config updating working
 3. get downloads working
+    * Done
 4. get user input sanitised server side(!!)
 5. give an error page if the project/day does not exist
+    * semi done
 6. implement basic user auth with htaccess
+    * Done
 7. Testing - user/security#
 8. reassess this list
 9. make a new airborne-web user

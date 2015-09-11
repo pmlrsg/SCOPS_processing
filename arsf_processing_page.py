@@ -4,7 +4,6 @@ from flask import render_template
 from flask import request, Response
 from functools import wraps
 from numpy import arange
-import folder_structure
 import ConfigParser
 import glob
 import xml.etree.ElementTree as etree
@@ -56,7 +55,7 @@ def check_auth(username, password, projcode):
         #print username, password, projcode, username_auth, password_auth
         if username == username_auth and password == password_auth and projcode == username_auth:
             auth = True
-        elif username == "arsf_admin" and password == "supersecret":
+        elif username == "arsf_admin" and password == "supers3cr3t":
             auth = True
     return auth
 
@@ -89,7 +88,7 @@ def validation(request):
     :return: validation state either true or false
     :rtype: bool
     """
-    #TODO make more checks, maybe come up with a brief black list
+    #TODO make more checks, maybe come up with a brief black list, should focus whitelisting though
     validated = True
     for key in request:
         if "band" in key or "pixel_size" in key or "bound" in key or "year" in key or "julianday" in key:
@@ -174,24 +173,42 @@ def job_request(name=None):
     :return: job request html page
     :rtype: html
     """
-    day=request.args["day"]
-    year=request.args["year"]
-    proj_code=request.args["project"]
-
-    #check if theres a sortie associated with the day
     try:
-        sortie = request.args["sortie"]
-    except:
-        sortie = ''
+        if not math.isnan(float(request.args["day"])):
+            day=request.args["day"]
+        else:
+            raise
+        if not math.isnan(float(request.args["year"])):
+            year=request.args["year"]
+        else:
+            raise
 
-    folder = folder_structure.FolderStructure(year=year, jday=str(day), projectCode=proj_code, fletter=sortie)
+        proj_code=request.args["project"].replace("..", "_").replace("/", "_")
 
-    #if folder_structure failed we need to error out
-    if folder.projPath == os.getcwd():
-        #TODO make this give a better message in a html doc
+        #check if theres a sortie associated with the day
+        try:
+            sortie = request.args["sortie"]
+        except:
+            sortie = ''
+
+        #Need to add a 0 or two to day if it isn't long enough
+        day = str(day)
+
+        if len(day) == 1:
+            day = "00" + day
+        elif len(day) == 2:
+            day = "0" + day
+
+        symlink_name = proj_code + '-' + year + '_' + day
+        path_to_symlink = "../../kml/" + year +"/" + symlink_name + sortie
+        if os.path.exists(path_to_symlink):
+            folder = "/" + os.path.realpath(path_to_symlink).strip("/processing/kml_overview")
+        else:
+            raise
+    except Exception,e:
         return "he's dead jim"
 
-    hyper_delivery = glob.glob(folder.projPath + '/delivery/*hyperspectral*')
+    hyper_delivery = glob.glob(folder + '/delivery/*hyperspectral*')
 
     #using the xml find the project bounds
     projxml = etree.parse(glob.glob(hyper_delivery[0] + '/project_information/*project.xml')[0]).getroot()

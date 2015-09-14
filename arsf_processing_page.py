@@ -8,7 +8,6 @@ import ConfigParser
 import glob
 import xml.etree.ElementTree as etree
 import os
-import utm
 import hdr_files
 import datetime
 from arsf_dem import dem_nav_utilities
@@ -24,7 +23,6 @@ KMLPASS = "/users/rsg/arsf/usr/share/kmlpasswords.csv"
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-#app.config['SERVER_NAME'] = "arsf.web.processor:5001"
 
 bands = [1, 2, 3, 4, 5]
 PIXEL_SIZES = arange(0.5, 7.5, 0.5)
@@ -165,7 +163,8 @@ def kml_page(name=None):
 @requires_auth
 def job_request(name=None):
     """
-    Receives a request from html with the day, year and required project code then returns a request page based on the data it finds in the proj dir
+    Receives a request from html with the day, year and required project code then returns a request page based on the
+    data it finds in the proj dir
 
     :param name: placeholder
     :type name: str
@@ -174,6 +173,7 @@ def job_request(name=None):
     :rtype: html
     """
     try:
+        #input validation, test if these are numbers
         if not math.isnan(float(request.args["day"])):
             day=request.args["day"]
         else:
@@ -183,6 +183,7 @@ def job_request(name=None):
         else:
             raise
 
+        #input validation, get rid of any potential paths the user may have used (should probably reject on this)
         proj_code=request.args["project"].replace("..", "_").replace("/", "_")
 
         #check if theres a sortie associated with the day
@@ -194,18 +195,23 @@ def job_request(name=None):
         #Need to add a 0 or two to day if it isn't long enough
         day = str(day)
 
+        #need to convert day to 00# or 0## for string stuff
         if len(day) == 1:
             day = "00" + day
         elif len(day) == 2:
             day = "0" + day
 
+        #check if the symlink for this day/year/proj code combo exists
         symlink_name = proj_code + '-' + year + '_' + day
+
+        #this should (should) be where the kml is on web server, makes it annoying to test though
         path_to_symlink = "../../kml/" + year +"/" + symlink_name + sortie
         if os.path.exists(path_to_symlink):
             folder = "/" + os.path.realpath(path_to_symlink).strip("/processing/kml_overview")
         else:
             raise
     except Exception,e:
+        #TODO make this a html page response
         return "he's dead jim"
 
     hyper_delivery = glob.glob(folder + '/delivery/*hyperspectral*')
@@ -213,17 +219,17 @@ def job_request(name=None):
     #using the xml find the project bounds
     projxml = etree.parse(glob.glob(hyper_delivery[0] + '/project_information/*project.xml')[0]).getroot()
     bounds={
-        'n' : projxml.find('.//{http://www.isotc211.org/2005/gmd}northBoundLatitude').find('{http://www.isotc211.org/2005/gco}Decimal').text,
-        's' : projxml.find('.//{http://www.isotc211.org/2005/gmd}southBoundLatitude').find('{http://www.isotc211.org/2005/gco}Decimal').text,
-        'e' : projxml.find('.//{http://www.isotc211.org/2005/gmd}eastBoundLongitude').find('{http://www.isotc211.org/2005/gco}Decimal').text,
-        'w' : projxml.find('.//{http://www.isotc211.org/2005/gmd}westBoundLongitude').find('{http://www.isotc211.org/2005/gco}Decimal').text
+        'n': projxml.find('.//{http://www.isotc211.org/2005/gmd}northBoundLatitude').find('{http://www.isotc211.org/2005/gco}Decimal').text,
+        's': projxml.find('.//{http://www.isotc211.org/2005/gmd}southBoundLatitude').find('{http://www.isotc211.org/2005/gco}Decimal').text,
+        'e': projxml.find('.//{http://www.isotc211.org/2005/gmd}eastBoundLongitude').find('{http://www.isotc211.org/2005/gco}Decimal').text,
+        'w': projxml.find('.//{http://www.isotc211.org/2005/gmd}westBoundLongitude').find('{http://www.isotc211.org/2005/gco}Decimal').text
     }
 
     #get the utm zone
-    utmzone = utm.from_latlon(float(bounds["n"]), float(bounds["e"]))[2:]
+    utmzone = projection.ll2utm(float(bounds["n"]), float(bounds["e"]))[:2]
 
     #if it's britain we should offer UKBNG on the web page
-    if utmzone[0] in [29, 30, 31] and utmzone[1] in ['U', 'V']:
+    if utmzone[0] in [29, 30, 31] and utmzone[1] in 'N':
         britain = True
     else:
         britain = False
@@ -252,7 +258,7 @@ def job_request(name=None):
     #calculate pixelsize
     pixel = pixelsize(altitude, sensor)
 
-    #round it to .5
+    #round it to .5 since we don't need greater resolution than this
     pixel = round(pixel * 2) / 2
 
     #sort the lines so they look good on the web page
@@ -299,7 +305,7 @@ def progress():
 
 def config_output(requestdict, lines, filename):
     """
-    Writes a vonfig to the web processing configs folder, this will then be picked up by web_qsub
+    Writes a config to the web processing configs folder, this will then be picked up by web_qsub
 
     :param requestdict: A request converted to immutable dict from the job request page
     :type requestdict: immutable dict

@@ -35,7 +35,7 @@ bounds = {
 }
 
 def confirm_email(config_name, project, email):
-    confirmation_link = "http://pmpc1319:5001/confirm/%s?proj=%s" % (config_name, project)
+    confirmation_link = "arsf-dandev.nerc.ac.uk/confirm/%s?proj=%s" % (config_name, project)
 
     message = "Please confirm your email with the link below:\n" \
               "\n" \

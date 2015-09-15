@@ -42,7 +42,7 @@ if not app.debug:
     app.logger.addHandler(file_handler)
 
 def confirm_email(config_name, project, email):
-    confirmation_link = "arsf-dandev.nerc.ac.uk/confirm/%s?proj=%s" % (config_name, project)
+    confirmation_link = "http://arsf-dandev.nerc.ac.uk/confirm/%s?proj=%s" % (config_name, project)
 
     message = "Please confirm your email with the link below:\n" \
               "\n" \

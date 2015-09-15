@@ -44,7 +44,7 @@ app.logger.addHandler(file_handler)
 app.logger.setLevel(logging.INFO)
 
 def confirm_email(config_name, project, email):
-    confirmation_link = "http://arsf-dandev.nerc.ac.uk/confirm/%s?proj=%s" % (config_name, project)
+    confirmation_link = "http://arsf-dandev.nerc.ac.uk/processor/confirm/%s?proj=%s" % (config_name, project)
 
     message = "Please confirm your email with the link below:\n" \
               "\n" \
@@ -57,7 +57,6 @@ def check_auth(username, password, projcode):
     password combination is valid.
     """
     auth = False
-    app.logger.error("auth")
     for pair in open(KMLPASS):
         username_auth, password_auth = pair.strip("\n").split(",")
         if username == username_auth and password == password_auth and projcode == username_auth:
@@ -76,14 +75,12 @@ def authenticate():
 def requires_auth(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        app.logger.error("auth start")
         auth = request.authorization
         try:
             project = request.args["project"]
         except:
             project = request.form["project"]
         if not auth or not check_auth(auth.username, auth.password, project):
-            app.logger.error("auth start")
             return authenticate()
         return f(*args, **kwargs)
     return decorated

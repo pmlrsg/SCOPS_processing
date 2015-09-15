@@ -44,7 +44,7 @@ app.logger.addHandler(file_handler)
 app.logger.setLevel(logging.INFO)
 
 def confirm_email(config_name, project, email):
-    confirmation_link = "http://arsf-dandev.nerc.ac.uk/processor/confirm/%s?proj=%s" % (config_name, project)
+    confirmation_link = "http://arsf-dandev.nerc.ac.uk/processor/confirm/%s?project=%s" % (config_name, project)
 
     message = "Please confirm your email with the link below:\n" \
               "\n" \
@@ -151,7 +151,7 @@ def confirm_request(configname):
     config_file = ConfigParser.RawConfigParser()
     config_file.read(configpath)
     config_file.set('DEFAULT', "confirmed", True)
-    config_file.write(config_file)
+    config_file.write(open(configpath))
     return "confirmed"
 
 

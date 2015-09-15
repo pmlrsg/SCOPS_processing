@@ -145,7 +145,8 @@ def confirm_request(configname):
 
     :return: string
     """
-    configpath = CONFIG_OUTPUT + configname
+    app.logger.warning("confirm req")
+    configpath = CONFIG_OUTPUT + configname + ".cfg"
     #TODO make this update the config and return a better message
     config_file = ConfigParser.RawConfigParser()
     config_file.read(configpath)

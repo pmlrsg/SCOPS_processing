@@ -39,8 +39,9 @@ app.debug=False
 import logging
 from logging import FileHandler
 file_handler = FileHandler("/local1/data/backup/rsgadmin/arsf-dan.nerc.ac.uk/logs/logger.log")
-file_handler.setLevel(logging.INFO)
+file_handler.setLevel(logging.DEBUG)
 app.logger.addHandler(file_handler)
+app.logger.setLevel(logging.INFO)
 
 def confirm_email(config_name, project, email):
     confirmation_link = "http://arsf-dandev.nerc.ac.uk/confirm/%s?proj=%s" % (config_name, project)
@@ -58,14 +59,9 @@ def check_auth(username, password, projcode):
     auth = False
     for pair in open(KMLPASS):
         username_auth, password_auth = pair.strip("\n").split(",")
-        app.logger.info("test")
-        if not app.debug:
-            app.logger.info([username, password, projcode, username_auth, password_auth])
         if username == username_auth and password == password_auth and projcode == username_auth:
             auth = True
         elif username == "arsf_admin" and password == "supers3cr3t":
-            if not app.debug:
-                app.logger.warning([username, password])
             auth = True
     return auth
 
@@ -74,7 +70,7 @@ def authenticate():
     return Response(
     'Could not verify your access level for that URL.\n'
     'You have to login with proper credentials', 401,
-    {'WWW-Authenticate': 'Basic realm="Login Required"'})
+    {'WWW-Authenticate': 'Basic realm="processor"'})
 
 def requires_auth(f):
     @wraps(f)
@@ -217,13 +213,14 @@ def job_request(name=None):
         symlink_name = proj_code + '-' + year + '_' + day
 
         #this should (should) be where the kml is on web server, makes it annoying to test though
-        path_to_symlink = "../../kml/" + year +"/" + symlink_name + sortie
+        path_to_symlink = "/local1/data/backup/rsgadmin/arsf-dan.nerc.ac.uk/html/kml/" + year +"/" + symlink_name + sortie
         if os.path.exists(path_to_symlink):
             folder = "/" + os.path.realpath(path_to_symlink).strip("/processing/kml_overview")
         else:
             raise
     except Exception,e:
         #TODO make this a html page response
+        app.logger.error(str(e))
         return "he's dead jim"
 
     hyper_delivery = glob.glob(folder + '/delivery/*hyperspectral*')

@@ -34,12 +34,13 @@ bounds = {
     'w': 40000
 }
 
-if not app.debug:
-    import logging
-    from logging import FileHandler
-    file_handler = FileHandler("/local1/data/backup/rsgadmin/arsf-dan.nerc.ac.uk/logs/logger.log")
-    file_handler.setLevel(logging.NOTSET)
-    app.logger.addHandler(file_handler)
+app.debug=False
+
+import logging
+from logging import FileHandler
+file_handler = FileHandler("/local1/data/backup/rsgadmin/arsf-dan.nerc.ac.uk/logs/logger.log")
+file_handler.setLevel(logging.INFO)
+app.logger.addHandler(file_handler)
 
 def confirm_email(config_name, project, email):
     confirmation_link = "http://arsf-dandev.nerc.ac.uk/confirm/%s?proj=%s" % (config_name, project)

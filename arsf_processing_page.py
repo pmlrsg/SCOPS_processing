@@ -57,6 +57,7 @@ def check_auth(username, password, projcode):
     password combination is valid.
     """
     auth = False
+    app.logger.error("auth")
     for pair in open(KMLPASS):
         username_auth, password_auth = pair.strip("\n").split(",")
         if username == username_auth and password == password_auth and projcode == username_auth:
@@ -75,12 +76,14 @@ def authenticate():
 def requires_auth(f):
     @wraps(f)
     def decorated(*args, **kwargs):
+        app.logger.error("auth start")
         auth = request.authorization
         try:
             project = request.args["project"]
         except:
             project = request.form["project"]
         if not auth or not check_auth(auth.username, auth.password, project):
+            app.logger.error("auth start")
             return authenticate()
         return f(*args, **kwargs)
     return decorated

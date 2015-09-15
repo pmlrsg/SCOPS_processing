@@ -151,7 +151,7 @@ def confirm_request(configname):
     config_file = ConfigParser.RawConfigParser()
     config_file.read(configpath)
     config_file.set('DEFAULT', "confirmed", True)
-    config_file.write(open(configpath))
+    config_file.write(open(configpath, 'w'))
     return "confirmed"
 
 

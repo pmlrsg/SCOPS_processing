@@ -37,7 +37,7 @@ bounds = {
 if not app.debug:
     import logging
     from logging import FileHandler
-    file_handler = FileHandler("logger.log")
+    file_handler = FileHandler("/local1/data/backup/rsgadmin/arsf-dan.nerc.ac.uk/logs/logger.log")
     file_handler.setLevel(logging.NOTSET)
     app.logger.addHandler(file_handler)
 
@@ -57,10 +57,13 @@ def check_auth(username, password, projcode):
     auth = False
     for pair in open(KMLPASS):
         username_auth, password_auth = pair.strip("\n").split(",")
-        #print username, password, projcode, username_auth, password_auth
+        if not app.debug:
+            logger.info([username, password, projcode, username_auth, password_auth])
         if username == username_auth and password == password_auth and projcode == username_auth:
             auth = True
         elif username == "arsf_admin" and password == "supers3cr3t":
+            if not app.debug:
+                logger.warning([username, password])
             auth = True
     return auth
 

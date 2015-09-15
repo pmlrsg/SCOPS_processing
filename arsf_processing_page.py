@@ -57,13 +57,14 @@ def check_auth(username, password, projcode):
     auth = False
     for pair in open(KMLPASS):
         username_auth, password_auth = pair.strip("\n").split(",")
+        app.logger.info("test")
         if not app.debug:
-            logger.info([username, password, projcode, username_auth, password_auth])
+            app.logger.info([username, password, projcode, username_auth, password_auth])
         if username == username_auth and password == password_auth and projcode == username_auth:
             auth = True
         elif username == "arsf_admin" and password == "supers3cr3t":
             if not app.debug:
-                logger.warning([username, password])
+                app.logger.warning([username, password])
             auth = True
     return auth
 

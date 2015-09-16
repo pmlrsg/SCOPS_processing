@@ -159,6 +159,7 @@ def confirm_request(configname):
    config_file.read(configpath)
    config_file.set('DEFAULT', "confirmed", True)
    config_file.write(open(configpath, 'w'))
+   os.chmod(configpath, "0666")
    return "confirmed"
 
 

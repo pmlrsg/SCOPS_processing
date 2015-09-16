@@ -159,7 +159,6 @@ def confirm_request(configname):
    config_file.read(configpath)
    config_file.set('DEFAULT', "confirmed", True)
    config_file.write(open(configpath, 'w'))
-   os.chmod(configpath, "0666")
    return "confirmed"
 
 
@@ -380,7 +379,7 @@ def config_output(requestdict, lines, filename):
                  requestdict["%s_band_start" % line] + '-' + requestdict["%s_band_stop" % line])
    configfile = open(CONFIG_OUTPUT + filename + '.cfg', 'a')
    config.write(configfile)
-   os.chmod(CONFIG_OUTPUT + filename + '.cfg', 0664)
+   os.chmod(CONFIG_OUTPUT + filename + '.cfg', 0666)
    confirm_email(filename, requestdict["project"], requestdict["email"])
    return 1
 

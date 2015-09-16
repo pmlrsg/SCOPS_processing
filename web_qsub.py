@@ -51,18 +51,19 @@ def web_qsub(config, local=False, local_threaded=False, output=None):
    config_file.read(config)
    lines = config_file.sections()
    defaults = config_file.defaults()
-   if output is not None:
-      output_location = web_structure(defaults["project_code"], defaults["julianday"], defaults["year"],
-                                      defaults["sortie"], output)
-   else:
+   if output is None or output == '':
       try:
          output_location = config_file.get('DEFAULT', 'output_folder')
          if not os.path.exists(output_location):
             raise Exception
-      except:
+      except Exception, e:
+         common_functions.ERROR(e)
          output_location = web_structure(defaults["project_code"], defaults["julianday"], defaults["year"],
                                          defaults["sortie"])
          config_file.set('DEFAULT', 'output_folder', output_location)
+   else:
+      output_location = output
+
 
    folder = folder_structure.FolderStructure(year=defaults["year"],
                                              jday=defaults["julianday"],
@@ -75,6 +76,7 @@ def web_qsub(config, local=False, local_threaded=False, output=None):
 
    try:
       dem_name = config_file.get('DEFAULT', 'dem_name')
+      print dem_name
       if not os.path.exists(dem_name):
          raise Exception
    except Exception, e:
@@ -91,7 +93,7 @@ def web_qsub(config, local=False, local_threaded=False, output=None):
 
    for line in lines:
       status_file = STATUS_FILE % (output_location, line)
-      if dict(config_file.items(line))["process"] in "true":
+      if dict(config_file.items(line))["process"] in "True":
          open(status_file, 'w+').write("%s = %s" % (line, "waiting"))
       else:
          open(status_file, 'w+').write("%s = %s" % (line, "not processing"))

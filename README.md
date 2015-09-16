@@ -8,11 +8,13 @@ To get to version 1:
 
 0. (make everything commented and readable)
 1. get emails sending
-    * semi done, needs to send something to the PI for access
+    * Done
 2. get email confirmation/config updating working
+    * Done
 3. get downloads working
     * Done
 4. get user input sanitised server side(!!)
+    * Semi done, revisiting this
 5. give an error page if the project/day does not exist
     * semi done
 6. implement basic user auth with htaccess
@@ -20,6 +22,12 @@ To get to version 1:
 7. Testing - user/security#
 8. reassess this list
 9. make a new airborne-web user
+10. Make the page more user guiding
+    * prevent submission with no lines
+    * better increments of lat long
+    * Interpolation explanation
+    * Better titling of bounding box
+    * Return the user to webpage if errors are identified on server side
 
 add reset buttons
 

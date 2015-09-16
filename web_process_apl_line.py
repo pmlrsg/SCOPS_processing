@@ -47,17 +47,19 @@ def email_error(stage, line, error, processing_folder):
    send_email(message, SEND_EMAIL, ERROR_EMAIL, processing_folder + " ERROR")
 
 
-def email_PI(pi_email, output_zip, output_location):
-   message = "Processing is complete for your order request %s, you can now download the data from the following location:" \
-             "" \
-             "%s" \
-             "" \
-             "The data will be available for a total of two weeks, however this may be extended if requested. If you identify any problems with your data or have issues downloading the data please contact ARSF staff at arsf-processing@pml.ac.uk." \
-             "" \
-             "Regards," \
-             "ARSF" % output_zip
+def email_PI(pi_email, output_location, project):
+   folder_name = os.path.basename(os.path.normpath(output_location))
+   download_link = 'https://arsf-dandev.nerc.ac.uk/processor/downloads/%s?&project=%s' % (folder_name, project)
 
-   send_email(message, pi_email, SEND_EMAIL, output_location + " order complete")
+   message = 'Processing is complete for your order request %s, you can now download the data from the following location:\n\n' \
+             '%s\n\n' \
+             'The data will be available for a total of two weeks, however this may be extended if requested. If you identify any problems with your data or have issues downloading the data please contact ARSF staff at arsf-processing@pml.ac.uk.\n\n' \
+             'Regards,\n' \
+             'ARSF'
+
+   message = message % (folder_name, download_link)
+
+   send_email(message, pi_email, folder_name + " order complete")
 
 
 def status_update(status_file, newstage, line):
@@ -266,6 +268,7 @@ def process_web_hyper_line(config_file, line_name, output_location):
       with zipfile.ZipFile(output_location + WEB_MAPPED_OUTPUT + line_details["project_code"] + '_' + line_details[
          "year"] + jday + '.zip', 'a', zipfile.ZIP_DEFLATED, allowZip64=True) as zip:
          for zip_mapped in zip_mapped_folder:
+            print zip_mapped
             zip.write(zip_mapped, os.path.basename(zip_mapped))
       email_PI(config["email"], output_location + WEB_MAPPED_OUTPUT + line_details["project_code"] + '_' + line_details[
          "year"] + jday + '.zip', output_location)

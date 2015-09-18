@@ -1,6 +1,6 @@
 The web interface for PIs to submit jobs for processing at PML.
 
-This is built in flask python and uses bootstrap to make the css nice, 
+This is built in flask python and uses bootstrap to make the css nice.
 
 THE TODO LIST
 
@@ -24,10 +24,18 @@ To get to version 1:
 9. make a new airborne-web user
 10. Make the page more user guiding
     * prevent submission with no lines
-    * better increments of lat long
+    * better increments of lat long on bounds
     * Interpolation explanation
     * Better titling of bounding box
     * Return the user to webpage if errors are identified on server side
+11. Add logging in both the webpage and the processing chain
+12. Submission page confirmation email text
+13. confirmation email text revisit
+14. find out why username only in email box is acceptable
+15. make "preset with optimum values" bold
+16. scroll box for flightlines table
+17. run with scripts not in /users/rsg/stgo
+18. no zip ext in some browsers?
 
 add reset buttons
 

@@ -64,6 +64,7 @@ def web_qsub(config, local=False, local_threaded=False, output=None):
    else:
       output_location = output
 
+   os.symlink(config, output_location + '/' + os.path.basename(config))
 
    folder = folder_structure.FolderStructure(year=defaults["year"],
                                              jday=defaults["julianday"],
@@ -93,7 +94,7 @@ def web_qsub(config, local=False, local_threaded=False, output=None):
 
    for line in lines:
       status_file = STATUS_FILE % (output_location, line)
-      if dict(config_file.items(line))["process"] in "True":
+      if "true" in dict(config_file.items(line))["process"]:
          open(status_file, 'w+').write("%s = %s" % (line, "waiting"))
       else:
          open(status_file, 'w+').write("%s = %s" % (line, "not processing"))

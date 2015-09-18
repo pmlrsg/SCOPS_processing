@@ -10,6 +10,8 @@ import glob
 import zipfile
 import pipes
 import smtplib
+import logging
+from logging import FileHandler
 from email.mime.text import MIMEText
 
 WEB_MASK_OUTPUT = "/level1b/"
@@ -25,7 +27,6 @@ INITIAL_STATUS = "initialising"
 NAVIGATION_FOLDER = "/flightlines/navigation/"
 SEND_EMAIL = "arsf-processing@pml.ac.uk"
 ERROR_EMAIL = "arsf-code@pml.ac.uk"
-
 
 def send_email(message, receive, subject, send=SEND_EMAIL):
    msg = MIMEText(message)
@@ -58,7 +59,6 @@ def email_PI(pi_email, output_location, project):
              'ARSF'
 
    message = message % (folder_name, download_link)
-
    send_email(message, pi_email, folder_name + " order complete")
 
 
@@ -66,17 +66,21 @@ def status_update(status_file, newstage, line):
    open(status_file, 'w').write("%s = %s" % (line, newstage))
 
 
-def error_write(output_location, error, line_name):
-   error_file = open(output_location + ERROR_DIR + line_name + "_error.txt", 'w')
-   error_file.write(str(error))
-
-
-def logger(log, line_name, output_location):
-   logfile = open(output_location + LOG_DIR + line_name + "_log.txt", 'a')
-   logfile.write(str(log))
+# def error_write(output_location, error, line_name):
+#    error_file = open(output_location + ERROR_DIR + line_name + "_error.txt", 'w')
+#    error_file.write(str(error))
+#
+#
+# def #logger(log, line_name, output_location):
+#    logfile = open(output_location + LOG_DIR + line_name + "_log.txt", 'a')
+#    logfile.write(str(log))
 
 
 def process_web_hyper_line(config_file, line_name, output_location):
+   file_handler = FileHandler(output_location + LOG_DIR + line_name + "_log.txt")
+   formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+   file_handler.setFormatter(formatter)
+   file_handler.setLevel(logging.INFO)
    config = ConfigParser.RawConfigParser()
    config.read(config_file)
    line_details = dict(config.items(line_name))
@@ -137,11 +141,13 @@ def process_web_hyper_line(config_file, line_name, output_location):
 
    try:
       log = common_functions.CallSubprocessOn(aplmask_cmd, redirect=True)
-      logger(log, line_name, output_location)
+      #logger(log, line_name, output_location)
+      logging.info(log)
       if not os.path.exists(masked_file):
          raise Exception, "masked file not output"
    except Exception, e:
       status_update(status_file, "ERROR - aplmask", line_name)
+      logging.error(e, line_name)
       error_write(output_location, e, line_name)
       exit(1)
 
@@ -159,20 +165,19 @@ def process_web_hyper_line(config_file, line_name, output_location):
 
    try:
       log = common_functions.CallSubprocessOn(aplcorr_cmd, redirect=True)
-      logger(log, line_name, output_location)
+      #logger(log, line_name, output_location)
+      logging.info(log)
       if not os.path.exists(igm_file):
          raise Exception, "igm file not output by aplcorr!"
    except Exception, e:
       status_update(status_file, "ERROR - aplcorr", line_name)
+      logging.error(e, line_name)
       error_write(output_location, e, line_name)
       exit(1)
 
    if "UTM" in line_details["projection"]:
       zone = line_details["projection"].split(" ")[2]
-      if zone[-1:] >= "N":
-         hemisphere = "N"
-      elif zone[-1:] <= "M":
-         hemisphere = "S"
+      hemisphere=zone[2:]
 
       zone = zone[:-1]
 
@@ -200,11 +205,13 @@ def process_web_hyper_line(config_file, line_name, output_location):
 
    try:
       log = common_functions.CallSubprocessOn(apltran_cmd, redirect=True)
-      logger(log, line_name, output_location)
+      logging.info(log)
+      #logger(log, line_name, output_location)
       if not os.path.exists(igm_file_transformed):
          raise Exception, "igm file not output by apltran!"
    except Exception, e:
       status_update(status_file, "ERROR - apltran", line_name)
+      logging.error(e, line_name)
       error_write(output_location, e, line_name)
       exit(1)
 
@@ -224,12 +231,14 @@ def process_web_hyper_line(config_file, line_name, output_location):
 
    try:
       log = common_functions.CallSubprocessOn(aplmap_cmd, redirect=True)
-      logger(log, line_name, output_location)
+      logging.info(log)
+      #logger(log, line_name, output_location)
       if not os.path.exists(mapname):
          raise Exception, "mapped file not output by aplmap!"
    except Exception, e:
       status_update(status_file, "ERROR", line_name)
-      error_write(output_location, e, line_name)
+      logging.error(e, line_name)
+      #error_write(output_location, e, line_name)
       exit(1)
 
    status_update(status_file, "waiting to zip", line_name)
@@ -251,8 +260,10 @@ def process_web_hyper_line(config_file, line_name, output_location):
    with zipfile.ZipFile(mapname + ".zip", 'w', zipfile.ZIP_DEFLATED, allowZip64=True) as zip:
       zip.write(mapname, os.path.basename(mapname))
       zip.write(mapname + ".hdr", os.path.basename(mapname + ".hdr"))
+      zip.close()
 
-   logger("zipping to " + mapname + ".zip", line_name, output_location)
+   logging.info("zipped to " + mapname + ".zip", line_name, output_location)
+   #logger("zipped to " + mapname + ".zip", line_name, output_location)
 
    status_update(status_file, "complete", line_name)
 
@@ -264,14 +275,22 @@ def process_web_hyper_line(config_file, line_name, output_location):
                all_check = False
 
    if all_check:
-      zip_mapped_folder = glob.glob(output_location + WEB_MAPPED_OUTPUT + "*.zip")
+      #if all are finished we'll use this process to zip all the zipped mapped files into one for download
+      zip_mapped_folder = glob.glob(output_location + WEB_MAPPED_OUTPUT + "*.bil.zip")
+      zip_contents_file = open(output_location + WEB_MAPPED_OUTPUT + "zip_contents.txt", 'a')
+      for zip_mapped in zip_mapped_folder:
+         zip_contents_file.write(zip_mapped)
+      zip_contents_file.close()
+      print zip_mapped_folder
       with zipfile.ZipFile(output_location + WEB_MAPPED_OUTPUT + line_details["project_code"] + '_' + line_details[
          "year"] + jday + '.zip', 'a', zipfile.ZIP_DEFLATED, allowZip64=True) as zip:
          for zip_mapped in zip_mapped_folder:
             print zip_mapped
             zip.write(zip_mapped, os.path.basename(zip_mapped))
-      email_PI(config["email"], output_location + WEB_MAPPED_OUTPUT + line_details["project_code"] + '_' + line_details[
-         "year"] + jday + '.zip', output_location)
+         #must close the file or it won't have final bits
+         zip.close()
+      #this *shouldn't* trigger until the zip file finishes
+      email_PI(line_details["email"], output_location, line_details["project_code"])
 
 
 if __name__ == '__main__':

@@ -40,7 +40,8 @@ import logging
 from logging import FileHandler
 
 file_handler = FileHandler("/local1/data/backup/rsgadmin/arsf-dan.nerc.ac.uk/logs/logger.log")
-file_handler.setLevel(logging.DEBUG)
+formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+file_handler.setFormatter(formatter)
 app.logger.addHandler(file_handler)
 app.logger.setLevel(logging.INFO)
 
@@ -88,7 +89,6 @@ def requires_auth(f):
       if not auth or not check_auth(auth.username, auth.password, project):
          return authenticate()
       return f(*args, **kwargs)
-
    return decorated
 
 
@@ -121,7 +121,7 @@ def validation(request):
       if ";" in request[key]:
          validated = False
 
-   return validated
+   return validated, request
 
 
 @app.route('/downloads/<path:projfolder>', methods=['GET', 'POST'])
@@ -138,7 +138,7 @@ def download(projfolder):
    if not os.path.exists(projfolder):
       return "not gonna work"
    download_file = [x for x in glob.glob(projfolder + "/mapped/*.zip") if "bil" not in x][0]
-   return send_from_directory(directory=os.path.dirname(download_file), filename=os.path.basename(download_file))
+   return send_from_directory(directory=os.path.dirname(download_file), filename=os.path.basename(download_file), mimetype='application/zip')
 
 
 @app.route('/confirm/<path:configname>', methods=['GET', 'POST'])

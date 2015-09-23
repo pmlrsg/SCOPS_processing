@@ -11,7 +11,7 @@ $( document).ready(function(){
 <div class="row">
 <h1>Submit processing job for Project Code: {{ project_code }} Julian Day: {{ julian_day }} Year: {{ year }} </h1>
 </div>
-<form class="form-horizontal" action="progress" method="post" enctype="multipart/form-data">
+<form class="form-horizontal" action="progress" method="post" enctype="multipart/form-data" onsubmit="return validateForm(event);">
     <div class="row">
         <div class="col-lg-12">
             <div class="well bs-component">
@@ -303,7 +303,7 @@ $( document).ready(function(){
     <input type="hidden" name="sortie" value="{{ sortie }}">
     <input type="hidden" name="year" value="{{ year }}">
     <input type="hidden" name="project" value="{{ project_code }}">
-    <button id="submit" type="submit" class="btn btn-primary" onsubmit="return validateForm(event);">Submit</button>
+    <button id="submit" type="submit" class="btn btn-primary">Submit</button>
 </form>
 <script>
     function checkEmailField(field) {

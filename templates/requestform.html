@@ -243,6 +243,7 @@ $( document).ready(function(){
                                 <p>&nbsp</p>
                             </div>
                             <div class="form-row">
+                                <p>&nbsp</p>
                                 <label>Bounding</label>
                                 <p>Input a bounding box for data processing, this must be inside the data coverage area. Default values cover your flightline area so only change this if you want to subset the data.</p>
                                 <div class="row">
@@ -358,8 +359,10 @@ $( document).ready(function(){
             }
         )
         if (at_least_one == true){
+            event.returnValue=true;
             return true;
         } else {
+            event.returnValue=false;
             return false;
         }
     }

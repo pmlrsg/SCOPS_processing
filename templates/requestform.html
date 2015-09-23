@@ -11,7 +11,7 @@ $( document).ready(function(){
 <div class="row">
 <h1>Submit processing job for Project Code: {{ project_code }} Julian Day: {{ julian_day }} Year: {{ year }} </h1>
 </div>
-<form class="form-horizontal" action="progress" method="post" enctype="multipart/form-data" onsubmit="return validateForm(event);">
+<form class="form-horizontal" action="progress" method="post" enctype="multipart/form-data" onsubmit="validateForm(event);">
     <div class="row">
         <div class="col-lg-12">
             <div class="well bs-component">
@@ -351,6 +351,7 @@ $( document).ready(function(){
     }
 
     function validateForm(event) {
+        console.log("brutal")
         var at_least_one = false;
         $('#line_checks_container input[type=checkbox]').each(function(){
                 if (this.checked){
@@ -362,12 +363,12 @@ $( document).ready(function(){
             event.returnValue=true;
             return true;
         } else {
+            event.returnValue=false;
             var errordiv = document.createElement('div');
             errordiv.id = "tableerror"
-            errordiv.className = "alert alert-dismissable alert-success";
+            errordiv.className = "alert alert-dismissable alert-danger";
             errordiv.innerHTML = '<button type="button" class="close" data-dismiss="alert">×</button><strong>Please select at least one line!</strong>'
-            errordiv.appendChild("line_checks_div")
-            event.returnValue=false;
+            document.getElementById("line_checks_div").appendChild(errordiv)
             return false;
         }
     }

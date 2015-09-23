@@ -21,7 +21,7 @@ $( document).ready(function(){
                         <div class="form-row">
                             <div class="col-md-6">
                                 <p>
-                                    This is the job request page for day {{ julian_day }}, it can be used to create processing requests for the ARSF-DAN grid. The system will aim to get data to you as quickly as possible however timings will depend on system load. Most options have been preset with optimum values where appropriate, once your jobs have completed their processing you will receive an email detailing download instructions.
+                                    This is the job request page for day {{ julian_day }}, it can be used to create processing requests for the ARSF-DAN grid. The system will aim to get data to you as quickly as possible however timings will depend on system load. Most options have been <strong>preset with optimum values</strong> where appropriate, once your jobs have completed their processing you will receive an email detailing download instructions.
                                 </p>
                             </div>
                             <div class="col-md-6">
@@ -33,7 +33,7 @@ $( document).ready(function(){
                                         <label for="email" class="control-label">Email address</label>
                                     </div>
                                     <div class="col-lg-5">
-                                        <input type="text" class="form-control" name="email" id="email" placeholder="Email" onblur="checkEmailField(this);" required>
+                                        <input type="text" class="form-control" name="email" id="email" placeholder="Email" pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,3}$" onblur="checkEmailField(this);" required>
                                     </div>
                                 </div>
                             </div>
@@ -46,7 +46,7 @@ $( document).ready(function(){
     <div class="row">
         <div class="col-lg-12">
             <div class="well bs-component">
-                <table class="table table-striped table-hover" id="line_checks_container">
+                <table class="table table-striped table-hover table-fixed" id="line_checks_container">
                     <thead>
                         <tr>
                             <th><input type="checkbox" id="all_lines_check" name="process_all_lines" checked=""> Process</th>
@@ -240,24 +240,24 @@ $( document).ready(function(){
                                 <p>&nbsp</p>
                             </div>
                             <div class="form-row">
-                                <p>Input a bounding box for data processing, this must be inside the data coverage area. Default values cover your flightline area so only change this if you want to subset the data.</p>
                                 <label>Bounding</label>
+                                <p>Input a bounding box for data processing, this must be inside the data coverage area. Default values cover your flightline area so only change this if you want to subset the data.</p>
                                 <div class="row">
                                     <label for="bound_n" class="col-lg-1 control-label">N:</label>
                                     <div class="col-lg-5" id="bound_n_cont">
-                                        <input type="number" pattern="[1-9]" class="form-control" id="bound_n" name="bound_n" onblur="checkBoundingText(this)" value={{ bounds.n }} >
+                                        <input type="number" pattern="[1-9]" step="0.00001" class="form-control" id="bound_n" name="bound_n" onblur="checkBoundingText(this)" value={{ bounds.n }} >
                                     </div>
                                     <label for="bound_s" class="col-lg-1 control-label">S:</label>
                                     <div class="col-lg-5" id="bound_s_cont">
-                                        <input type="number" pattern="[1-9]"  class="form-control" id="bound_s" name="bound_s" onblur="checkBoundingText(this)" value={{ bounds.s }}>
+                                        <input type="number" pattern="[1-9]" step="0.00001"  class="form-control" id="bound_s" name="bound_s" onblur="checkBoundingText(this)" value={{ bounds.s }}>
                                     </div>
                                     <label for="bound_e" class="col-lg-1 control-label">E:</label>
                                     <div class="col-lg-5" id="bound_e_cont">
-                                        <input type="number" pattern="[1-9]"  class="form-control" id="bound_e" name="bound_e" onblur="checkBoundingText(this)" value={{ bounds.e }}>
+                                        <input type="number" pattern="[1-9]" step="0.00001"  class="form-control" id="bound_e" name="bound_e" onblur="checkBoundingText(this)" value={{ bounds.e }}>
                                     </div>
                                     <label for="bound_w" pattern="[1-9]" class="col-lg-1 control-label">W:</label>
                                     <div class="col-lg-5" id="bound_w_cont">
-                                        <input type="number" pattern="[1-9]" class="form-control" id="bound_w" name="bound_w" onblur="checkBoundingText(this)" value={{ bounds.w }}>
+                                        <input type="number" pattern="[1-9]" step="0.00001" class="form-control" id="bound_w" name="bound_w" onblur="checkBoundingText(this)" value={{ bounds.w }}>
                                     </div>
                                 </div>
                             </div>
@@ -299,7 +299,7 @@ $( document).ready(function(){
     <input type="hidden" name="sortie" value="{{ sortie }}">
     <input type="hidden" name="year" value="{{ year }}">
     <input type="hidden" name="project" value="{{ project_code }}">
-    <button id="submit" type="submit" class="btn btn-primary">Submit</button>
+    <button id="submit" type="submit" class="btn btn-primary" onsubmit="return validateForm();">Submit</button>
 </form>
 <script>
     function checkEmailField(field) {
@@ -344,6 +344,10 @@ $( document).ready(function(){
         if (document.getElementById(band1).selectedIndex >= document.getElementById(band2).selectedIndex) {
             document.getElementById(band2).selectedIndex = document.getElementById(band1).selectedIndex;
         }
+    }
+
+    function validateForm() {
+
     }
 </script>
 {% endblock %}

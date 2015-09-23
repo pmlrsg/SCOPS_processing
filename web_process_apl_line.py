@@ -66,21 +66,23 @@ def status_update(status_file, newstage, line):
    open(status_file, 'w').write("%s = %s" % (line, newstage))
 
 
-# def error_write(output_location, error, line_name):
+# def #error_write(output_location, error, line_name):
 #    error_file = open(output_location + ERROR_DIR + line_name + "_error.txt", 'w')
 #    error_file.write(str(error))
 #
 #
 # def #logger(log, line_name, output_location):
 #    logfile = open(output_location + LOG_DIR + line_name + "_log.txt", 'a')
-#    logfile.write(str(log))
+#    logfile.write(str(str(log)))
 
 
 def process_web_hyper_line(config_file, line_name, output_location):
-   file_handler = FileHandler(output_location + LOG_DIR + line_name + "_log.txt")
+   logger = logging.getLogger()
+   file_handler = FileHandler(output_location + LOG_DIR + line_name + "_log.txt", mode='a')
    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
    file_handler.setFormatter(formatter)
-   file_handler.setLevel(logging.INFO)
+   logger.addHandler(file_handler)
+   logger.setLevel(logging.DEBUG)
    config = ConfigParser.RawConfigParser()
    config.read(config_file)
    line_details = dict(config.items(line_name))
@@ -142,13 +144,14 @@ def process_web_hyper_line(config_file, line_name, output_location):
    try:
       log = common_functions.CallSubprocessOn(aplmask_cmd, redirect=True)
       #logger(log, line_name, output_location)
-      logging.info(log)
+      for line in log[1]:
+         logger.info(str(line))
       if not os.path.exists(masked_file):
          raise Exception, "masked file not output"
    except Exception, e:
       status_update(status_file, "ERROR - aplmask", line_name)
-      logging.error(e, line_name)
-      error_write(output_location, e, line_name)
+      logger.error([e, line_name])
+      # #error_write(output_location, e, line_name)
       exit(1)
 
    status_update(status_file, "aplcorr", line_name)
@@ -166,13 +169,14 @@ def process_web_hyper_line(config_file, line_name, output_location):
    try:
       log = common_functions.CallSubprocessOn(aplcorr_cmd, redirect=True)
       #logger(log, line_name, output_location)
-      logging.info(log)
+      for line in log[1]:
+         logger.info(str(line))
       if not os.path.exists(igm_file):
          raise Exception, "igm file not output by aplcorr!"
    except Exception, e:
       status_update(status_file, "ERROR - aplcorr", line_name)
-      logging.error(e, line_name)
-      error_write(output_location, e, line_name)
+      logger.error([e, line_name])
+      #error_write(output_location, e, line_name)
       exit(1)
 
    if "UTM" in line_details["projection"]:
@@ -185,7 +189,7 @@ def process_web_hyper_line(config_file, line_name, output_location):
    elif "UKBNG" in line_details["projection"]:
       projection = "osng"
    else:
-      print "dunno what the projection is :/"
+      logger.error("Couldn't find the projection from input string")
 
    igm_file_transformed = igm_file.replace(".igm", "_%s.igm") % projection.replace(' ', '_')
 
@@ -205,14 +209,15 @@ def process_web_hyper_line(config_file, line_name, output_location):
 
    try:
       log = common_functions.CallSubprocessOn(apltran_cmd, redirect=True)
-      logging.info(log)
+      for line in log[1]:
+         logger.info(str(line))
       #logger(log, line_name, output_location)
       if not os.path.exists(igm_file_transformed):
          raise Exception, "igm file not output by apltran!"
    except Exception, e:
       status_update(status_file, "ERROR - apltran", line_name)
-      logging.error(e, line_name)
-      error_write(output_location, e, line_name)
+      logger.error([e, line_name])
+      #error_write(output_location, e, line_name)
       exit(1)
 
    status_update(status_file, "aplmap", line_name)
@@ -231,14 +236,15 @@ def process_web_hyper_line(config_file, line_name, output_location):
 
    try:
       log = common_functions.CallSubprocessOn(aplmap_cmd, redirect=True)
-      logging.info(log)
+      for line in log[1]:
+         logger.info(str(line))
       #logger(log, line_name, output_location)
       if not os.path.exists(mapname):
          raise Exception, "mapped file not output by aplmap!"
    except Exception, e:
       status_update(status_file, "ERROR", line_name)
-      logging.error(e, line_name)
-      #error_write(output_location, e, line_name)
+      logger.error([e, line_name])
+      ##error_write(output_location, e, line_name)
       exit(1)
 
    status_update(status_file, "waiting to zip", line_name)
@@ -262,7 +268,7 @@ def process_web_hyper_line(config_file, line_name, output_location):
       zip.write(mapname + ".hdr", os.path.basename(mapname + ".hdr"))
       zip.close()
 
-   logging.info("zipped to " + mapname + ".zip", line_name, output_location)
+   logger.info(str("zipped " + line_name + " to " + mapname + ".zip" + " at " + output_location))
    #logger("zipped to " + mapname + ".zip", line_name, output_location)
 
    status_update(status_file, "complete", line_name)
@@ -279,13 +285,13 @@ def process_web_hyper_line(config_file, line_name, output_location):
       zip_mapped_folder = glob.glob(output_location + WEB_MAPPED_OUTPUT + "*.bil.zip")
       zip_contents_file = open(output_location + WEB_MAPPED_OUTPUT + "zip_contents.txt", 'a')
       for zip_mapped in zip_mapped_folder:
-         zip_contents_file.write(zip_mapped)
+         zip_contents_file.write(zip_mapped + "\n")
       zip_contents_file.close()
-      print zip_mapped_folder
+      logger.info("outputting master zip")
       with zipfile.ZipFile(output_location + WEB_MAPPED_OUTPUT + line_details["project_code"] + '_' + line_details[
          "year"] + jday + '.zip', 'a', zipfile.ZIP_DEFLATED, allowZip64=True) as zip:
          for zip_mapped in zip_mapped_folder:
-            print zip_mapped
+            logger.info("zipping " + zip_mapped)
             zip.write(zip_mapped, os.path.basename(zip_mapped))
          #must close the file or it won't have final bits
          zip.close()

@@ -303,7 +303,7 @@ $( document).ready(function(){
     <input type="hidden" name="sortie" value="{{ sortie }}">
     <input type="hidden" name="year" value="{{ year }}">
     <input type="hidden" name="project" value="{{ project_code }}">
-    <button id="submit" type="submit" class="btn btn-primary" onsubmit="return validateForm();">Submit</button>
+    <button id="submit" type="submit" class="btn btn-primary" onsubmit="return validateForm(event);">Submit</button>
 </form>
 <script>
     function checkEmailField(field) {
@@ -350,7 +350,7 @@ $( document).ready(function(){
         }
     }
 
-    function validateForm() {
+    function validateForm(event) {
         var at_least_one = false;
         $('#line_checks_container input[type=checkbox]').each(function(){
                 if (this.checked){

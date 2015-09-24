@@ -23,6 +23,10 @@ $( document).ready(function(){
                                 <p>
                                     This is the job request page for day {{ julian_day }}, it can be used to create processing requests for the ARSF-DAN grid. The system will aim to get data to you as quickly as possible however timings will depend on system load. Most options have been <strong>preset with optimum values</strong> where appropriate, once your jobs have completed their processing you will receive an email detailing download instructions.
                                 </p>
+                                <p>
+                                    If using data produced using this tool you must cite this paper:
+                                    <a href="http://dl.acm.org/citation.cfm?id=2589087">Data processing of remotely sensed airborne hyperspectral data using the Airborne Processing Library (APL): Geocorrection algorithm descriptions and spatial accuracy assessment</a>
+                                </p>
                             </div>
                             <div class="col-md-6">
                                 <div class="form-row">
@@ -270,6 +274,7 @@ $( document).ready(function(){
                             </div>
                             <div class="row">
                                 <label class="col-lg-4 control-label">Select interpolation</label>
+                                <p>More information on the algorithms available can be found <a target="_blank" href="https://arsf-dan.nerc.ac.uk/trac/wiki/Processing/AplUserGuide">here</a> under information on interpolation methods.</p>
                             </div>
                             <div class="row">
                                 <div class="col-lg-4">

@@ -159,7 +159,7 @@ def confirm_request(configname):
    config_file.read(configpath)
    config_file.set('DEFAULT', "confirmed", True)
    config_file.write(open(configpath, 'w'))
-   return "confirmed"
+   return "confirmation.html"
 
 
 @app.route('/theme')
@@ -322,7 +322,7 @@ def progress():
       return render_template('submitted.html')
    else:
       # TODO make this rejection better
-      return "request rejected"
+      return render_template("reject.html")
 
 
 def config_output(requestdict, lines, filename):

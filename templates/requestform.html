@@ -88,7 +88,6 @@ $( document).ready(function(){
                         </tr>
                         {% endfor %}
                     </tbody>
-                    </div>
                     <script>
                         $("#all_lines_check").change(function () {
                             $("#line_checks_container :checkbox").prop('checked', $(this).prop('checked'));
@@ -208,8 +207,8 @@ $( document).ready(function(){
                             <div class="radio">
                                     <div class="form-row">
                                         <input type="radio" name="projectionRadios" id="optionsProjRadios3" value="proj_string" disabled="">
-                                        <label for="projStringText" class="control-label">Proj string</label>
-                                        <input class="form-control" type="text" name="projString" id="projStringText" placeholder="proj" disabled="">
+                                        <label for="projStringText col-lg-3" class="control-label">Proj string</label>
+                                        <input class="form-control col-lg-3" type="text" name="projString" id="projStringText" placeholder="proj" disabled="">
                                     </div>
                             </div>
                         </div>

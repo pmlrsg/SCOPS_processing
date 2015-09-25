@@ -49,9 +49,11 @@ app.logger.setLevel(logging.INFO)
 def confirm_email(config_name, project, email):
    confirmation_link = "http://arsf-dandev.nerc.ac.uk/processor/confirm/%s?project=%s" % (config_name, project)
 
-   message = "Please confirm your email with the link below:\n" \
+   message = "You've received this email because your address was used to request procesing from the ARSF web processor. If you did not do this please ignore this email.\n\n" \
+             "Please confirm your email with the link below:\n" \
              "\n" \
-             "<a href='%s'>%s</a>\n" % (confirmation_link, confirmation_link)
+             "%s\n\n" \
+             "If you have any questions or issues accessing the above link please email arsf-processing@pml.ac.uk quoting the reference %s" % (confirmation_link, config_name)
 
    web_process_apl_line.send_email(message, email, "ARSF confirm email")
 
@@ -229,7 +231,7 @@ def job_request(name=None):
    except Exception, e:
       # TODO make this a html page response
       app.logger.error(str(e))
-      return "he's dead jim"
+      return "404.html"
 
    hyper_delivery = glob.glob(folder + '/delivery/*hyperspectral*')
 

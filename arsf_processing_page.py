@@ -6,7 +6,7 @@ from functools import wraps
 from numpy import arange
 import ConfigParser
 import glob
-import xml.etree.ElementTree as etree
+import xml.etree.ElementTree as Etree
 import os
 import hdr_files
 import datetime
@@ -15,6 +15,8 @@ import random
 import math
 import projection
 import web_process_apl_line
+import logging
+from logging import FileHandler
 
 CONFIG_OUTPUT = "/users/rsg/arsf/web_processing/configs/"
 UPLOAD_FOLDER = "/users/rsg/arsf/web_processing/dem_upload/"
@@ -36,9 +38,6 @@ bounds = {
 
 app.debug = False
 
-import logging
-from logging import FileHandler
-
 file_handler = FileHandler("/local1/data/backup/rsgadmin/arsf-dan.nerc.ac.uk/logs/logger.log")
 formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
 file_handler.setFormatter(formatter)
@@ -49,11 +48,13 @@ app.logger.setLevel(logging.INFO)
 def confirm_email(config_name, project, email):
    confirmation_link = "http://arsf-dandev.nerc.ac.uk/processor/confirm/%s?project=%s" % (config_name, project)
 
-   message = "You've received this email because your address was used to request procesing from the ARSF web processor. If you did not do this please ignore this email.\n\n" \
+   message = "You've received this email because your address was used to request processing from the ARSF web" \
+             " processor. If you did not do this please ignore this email.\n\n" \
              "Please confirm your email with the link below:\n" \
              "\n" \
              "%s\n\n" \
-             "If you have any questions or issues accessing the above link please email arsf-processing@pml.ac.uk quoting the reference %s" % (confirmation_link, config_name)
+             "If you have any questions or issues accessing the above link" \
+             " please email arsf-processing@pml.ac.uk quoting the reference %s" % (confirmation_link, config_name)
 
    web_process_apl_line.send_email(message, email, "ARSF confirm email")
 
@@ -173,7 +174,17 @@ def theme():
 @app.route('/kmlpage')
 def kml_page(name=None):
    # TODO make kml pages link to jobrequest and remove this
-   return render_template('kml.html')
+   link_base = "https://arsf-dandev.nerc.ac.uk/processor/jobrequest?day=%s&year=%s&project=%s"
+   kml_links_list = []
+   kml_dir = "/local1/data/backup/rsgadmin/arsf-dan.nerc.ac.uk/html/kml/2014"
+   for kml_link in os.listdir(kml_dir):
+      project_code, dayyear = kml_link.split("-")
+      day, year = dayyear.split("_")
+      link = link_base % (day, year, project_code)
+      kml_links_list.append([link, day])
+
+   return render_template('kml.html',
+                          kml_list=kml_links_list)
 
 
 @app.route('/')
@@ -229,14 +240,13 @@ def job_request(name=None):
       else:
          raise
    except Exception, e:
-      # TODO make this a html page response
       app.logger.error(str(e))
       return "404.html"
 
    hyper_delivery = glob.glob(folder + '/delivery/*hyperspectral*')
 
    # using the xml find the project bounds
-   projxml = etree.parse(glob.glob(hyper_delivery[0] + '/project_information/*project.xml')[0]).getroot()
+   projxml = Etree.parse(glob.glob(hyper_delivery[0] + '/project_information/*project.xml')[0]).getroot()
    bounds = {
       'n': projxml.find('.//{http://www.isotc211.org/2005/gmd}northBoundLatitude').find(
          '{http://www.isotc211.org/2005/gco}Decimal').text,

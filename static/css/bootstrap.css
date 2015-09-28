@@ -279,6 +279,9 @@ body {
   color: #2c3e50;
   background-color: #ffffff;
 }
+.body-hyper {
+  background-image: url('../images/fenix_mosaic.png') ! important;
+}
 input,
 button,
 select,

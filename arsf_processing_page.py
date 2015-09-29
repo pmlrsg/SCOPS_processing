@@ -239,18 +239,24 @@ def job_request(name=None):
       else:
          raise
    except:
-      return render_template("404.html")
+      return render_template("404.html",
+                             title="Project not found!",
+                             Error="The project you asked for does not seem to exist, check the link and try again.")
 
    try:
       hyper_delivery = glob.glob(folder + '/delivery/*hyperspectral*')
    except:
-      return render_template("404.html")
+      return render_template("404.html",
+                             title="Delivery not found!",
+                             Error="The delivery for this dataset could not be found, have you received confirmation of processing completion?")
 
    # using the xml find the project bounds
    try:
       projxml = Etree.parse(glob.glob(hyper_delivery[0] + '/project_information/*project.xml')[0]).getroot()
    except:
-      return render_template("404.html")
+      return render_template("404.html",
+                             title="Delivery not found!",
+                             Error="The delivery for this dataset could not be found, have you received confirmation of processing completion?")
    bounds = {
       'n': projxml.find('.//{http://www.isotc211.org/2005/gmd}northBoundLatitude').find(
          '{http://www.isotc211.org/2005/gco}Decimal').text,

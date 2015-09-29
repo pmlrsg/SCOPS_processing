@@ -162,7 +162,7 @@ def confirm_request(configname):
    config_file.read(configpath)
    config_file.set('DEFAULT', "confirmed", True)
    config_file.write(open(configpath, 'w'))
-   return "confirmation.html"
+   return render_template("confirmation.html")
 
 
 @app.route('/theme')
@@ -175,16 +175,8 @@ def theme():
 def kml_page(name=None):
    # TODO make kml pages link to jobrequest and remove this
    link_base = "https://arsf-dandev.nerc.ac.uk/processor/jobrequest?day=%s&year=%s&project=%s"
-   kml_links_list = []
-   kml_dir = "/local1/data/backup/rsgadmin/arsf-dan.nerc.ac.uk/html/kml/2014"
-   for kml_link in os.listdir(kml_dir):
-      project_code, dayyear = kml_link.split("-")
-      day, year = dayyear.split("_")
-      link = link_base % (day, year, project_code)
-      kml_links_list.append([link, day])
-
-   return render_template('kml.html',
-                          kml_list=kml_links_list)
+   kml_links_list = [['https://arsf-dandev.nerc.ac.uk/processor/jobrequest?day=159&year=2014&project=RG12_09', '159'], ['https://arsf-dandev.nerc.ac.uk/processor/jobrequest?day=068a&year=2014&project=BAS13_01', '068a'], ['https://arsf-dandev.nerc.ac.uk/processor/jobrequest?day=152a&year=2014&project=GB12_05', '152a'], ['https://arsf-dandev.nerc.ac.uk/processor/jobrequest?day=075&year=2014&project=GB12_05', '075'], ['https://arsf-dandev.nerc.ac.uk/processor/jobrequest?day=062&year=2014&project=BAS13_01', '062'], ['https://arsf-dandev.nerc.ac.uk/processor/jobrequest?day=141&year=2014&project=GB13_00', '141'], ['https://arsf-dandev.nerc.ac.uk/processor/jobrequest?day=070&year=2014&project=BAS13_01', '070'], ['https://arsf-dandev.nerc.ac.uk/processor/jobrequest?day=156&year=2014&project=GB13_10', '156'], ['https://arsf-dandev.nerc.ac.uk/processor/jobrequest?day=083&year=2014&project=GB12_04', '083'], ['https://arsf-dandev.nerc.ac.uk/processor/jobrequest?day=088&year=2014&project=RG12_09', '088'], ['https://arsf-dandev.nerc.ac.uk/processor/jobrequest?day=069&year=2014&project=BAS13_01', '069'], ['https://arsf-dandev.nerc.ac.uk/processor/jobrequest?day=067&year=2014&project=GB14_00', '067'], ['https://arsf-dandev.nerc.ac.uk/processor/jobrequest?day=057&year=2014&project=GB14_00', '057'], ['https://arsf-dandev.nerc.ac.uk/processor/jobrequest?day=078&year=2014&project=GB14_00', '078'], ['https://arsf-dandev.nerc.ac.uk/processor/jobrequest?day=063&year=2014&project=BAS13_01', '063'], ['https://arsf-dandev.nerc.ac.uk/processor/jobrequest?day=068b&year=2014&project=BAS13_01', '068b']]
+   return render_template('kml.html')
 
 
 @app.route('/')
@@ -219,7 +211,7 @@ def job_request(name=None):
       try:
          sortie = request.args["sortie"]
       except:
-         sortie = ''
+         sortie = None
 
       # Need to add a 0 or two to day if it isn't long enough
       day = str(day)
@@ -231,22 +223,34 @@ def job_request(name=None):
          day = "0" + day
 
       # check if the symlink for this day/year/proj code combo exists
-      symlink_name = proj_code + '-' + year + '_' + day
+      if sortie is None:
+         symlink_name = proj_code + '-' + year + '_' + day
+         app.logger.error("none")
+      else:
+         symlink_name = proj_code + '-' + year + '_' + day + sortie
+
+      app.logger.error(symlink_name)
 
       # this should (should) be where the kml is on web server, makes it annoying to test though
-      path_to_symlink = "/local1/data/backup/rsgadmin/arsf-dan.nerc.ac.uk/html/kml/" + year + "/" + symlink_name + sortie
+      path_to_symlink = "/local1/data/backup/rsgadmin/arsf-dan.nerc.ac.uk/html/kml/" + year + "/" + symlink_name
+      app.logger.error("/local1/data/backup/rsgadmin/arsf-dan.nerc.ac.uk/html/kml/" + year + "/" + symlink_name)
       if os.path.exists(path_to_symlink):
          folder = "/" + os.path.realpath(path_to_symlink).strip("/processing/kml_overview")
       else:
          raise
-   except Exception, e:
-      app.logger.error(str(e))
-      return "404.html"
+   except:
+      return render_template("404.html")
 
-   hyper_delivery = glob.glob(folder + '/delivery/*hyperspectral*')
+   try:
+      hyper_delivery = glob.glob(folder + '/delivery/*hyperspectral*')
+   except:
+      return render_template("404.html")
 
    # using the xml find the project bounds
-   projxml = Etree.parse(glob.glob(hyper_delivery[0] + '/project_information/*project.xml')[0]).getroot()
+   try:
+      projxml = Etree.parse(glob.glob(hyper_delivery[0] + '/project_information/*project.xml')[0]).getroot()
+   except:
+      return render_template("404.html")
    bounds = {
       'n': projxml.find('.//{http://www.isotc211.org/2005/gmd}northBoundLatitude').find(
          '{http://www.isotc211.org/2005/gco}Decimal').text,

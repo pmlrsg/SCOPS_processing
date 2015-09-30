@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 from flask import Flask, send_from_directory
 from flask import render_template
-from flask import request, Response
+from flask import request, Response, redirect, url_for
 from functools import wraps
 from numpy import arange
 import ConfigParser
@@ -106,6 +106,7 @@ def validation(request):
    """
    # TODO make more checks, maybe come up with a brief black list, should focus whitelisting though
    validated = True
+   errors = []
    for key in request:
       if "band" in key or "pixel_size" in key or "bound" in key or "year" in key or "julianday" in key:
          if math.isnan(float(request[key])):
@@ -120,11 +121,15 @@ def validation(request):
 
          if request[key] not in projstring:
             validated = False
+            errors.append({
+               'item': 'projString',
+               'error': 'Please check this proj string is correct, it cannot be validated'
+            })
 
       if ";" in request[key]:
          validated = False
 
-   return validated, request
+   return validated, errors
 
 
 @app.route('/downloads/<path:projfolder>', methods=['GET', 'POST'])
@@ -182,7 +187,7 @@ def kml_page(name=None):
 @app.route('/')
 @app.route('/jobrequest', methods=['GET', 'POST'])
 @requires_auth
-def job_request(name=None):
+def job_request(name=None, errors=None):
    """
    Receives a request from html with the day, year and required project code then returns a request page based on the
    data it finds in the proj dir
@@ -331,7 +336,7 @@ def progress():
    :rtype: html
    """
    requestdict = request.form
-   validated = validation(requestdict)
+   validated, errors = validation(requestdict)
    if validated:
       lines = []
       for key in requestdict:
@@ -343,8 +348,13 @@ def progress():
       config_output(requestdict, lines=lines, filename=filename)
       return render_template('submitted.html')
    else:
-      # TODO make this rejection better
-      return render_template("reject.html")
+      # TODO it would be better if this redirected to the job request page
+      try:
+         return redirect(url_for('job_request', day=requestdict['julianday'], year=requestdict['year'], project=requestdict['project'], errors=errors))
+      except:
+         return render_template('404.html',
+                                title='Validation Failed!',
+                                Error='Something went wrong validating your inputs')
 
 
 def config_output(requestdict, lines, filename):

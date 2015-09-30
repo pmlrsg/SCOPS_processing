@@ -225,9 +225,10 @@ $( document).ready(function(){
                             <div class="form-row">
 
                                 <p>Select your pixel size, note that the size of pixels will affect output file size. The optimum size for the altitude of your data has already been selected.</p>
+                                <input type="checkbox" id="pixel_check" name="pixel_check" > Square pixels
                                 <label for="pixel_size_x" class="col-lg-3 control-label">Pixel Size X:</label>
                                 <div class="col-lg-3">
-                                    <select class="col-lg-3 form-control" id="pixel_size_x" name="pixel_size_x">
+                                    <select class="col-lg-3 form-control" id="" name="pixel_size_x">
                                         {% for size in pixel_sizes %}
                                         <option {% if size == optimal_pixel %}selected{% endif %}>{{ size }}</option>
                                         {% endfor %}
@@ -307,6 +308,7 @@ $( document).ready(function(){
     <input type="hidden" name="sortie" value="{{ sortie }}">
     <input type="hidden" name="year" value="{{ year }}">
     <input type="hidden" name="project" value="{{ project_code }}">
+    <button type="reset" value="Reset">Reset</button>
     <button id="submit" type="submit" class="btn btn-primary">Submit</button>
 </form>
 <script>
@@ -355,7 +357,6 @@ $( document).ready(function(){
     }
 
     function validateForm(event) {
-        console.log("brutal")
         var at_least_one = false;
         $('#line_checks_container input[type=checkbox]').each(function(){
                 if (this.checked){
@@ -376,5 +377,17 @@ $( document).ready(function(){
             return false;
         }
     }
+
+    $("#pixel_size_x").change(function () {
+        if(document.getElementById('pixel_check').checked) {
+            $("#pixel_size_y").value = $("#pixel_size_x").value;
+        }
+    });
+
+    $("#pixel_size_y").change(function () {
+        if(document.getElementById('pixel_check').checked) {
+            $("#pixel_size_x").value = $("#pixel_size_y").value;
+        }
+    });
 </script>
 {% endblock %}

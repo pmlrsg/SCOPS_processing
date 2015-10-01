@@ -4813,6 +4813,9 @@ a.list-group-item-danger.active:focus {
   -webkit-box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
   box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
 }
+.panel-no-margin {
+  margin-bottom: 0px ! important;
+}
 .panel-body {
   padding: 15px;
 }
@@ -4821,6 +4824,9 @@ a.list-group-item-danger.active:focus {
   border-bottom: 1px solid transparent;
   border-top-right-radius: 3px;
   border-top-left-radius: 3px;
+}
+.panel-heading-border-solid {
+  border-bottom: 1px solid ! important;
 }
 .panel-heading > .dropdown .dropdown-toggle {
   color: inherit;

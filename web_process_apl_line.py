@@ -14,6 +14,8 @@ import logging
 from logging import FileHandler
 from email.mime.text import MIMEText
 
+from common_arsf.web_functions import send_email
+
 WEB_MASK_OUTPUT = "/level1b/"
 WEB_IGM_OUTPUT = "/igm/"
 WEB_MAPPED_OUTPUT = "/mapped/"
@@ -28,17 +30,15 @@ NAVIGATION_FOLDER = "/flightlines/navigation/"
 SEND_EMAIL = "arsf-processing@pml.ac.uk"
 ERROR_EMAIL = "arsf-code@pml.ac.uk"
 
-def send_email(message, receive, subject, send=SEND_EMAIL):
-   msg = MIMEText(message)
-   msg['From'] = send
-   msg['To'] = receive
-   msg['Subject'] = subject
-
-   sender = smtplib.SMTP('localhost')
-   sender.sendmail(send, [receive], msg.as_string())
-
-
 def email_error(stage, line, error, processing_folder):
+   """
+   Send an email to arsf-code telling us what went wrong
+   :param stage:
+   :param line:
+   :param error:
+   :param processing_folder:
+   :return:
+   """
    message = "Processing has failed on line %s at stage %s due to:\n\n" \
              "%s\n\n" \
              "The processing is contained in folder %s\n\n" \
@@ -49,6 +49,14 @@ def email_error(stage, line, error, processing_folder):
 
 
 def email_PI(pi_email, output_location, project):
+   """
+   Send an email to the PI telling them where they can download their data
+
+   :param pi_email:
+   :param output_location:
+   :param project:
+   :return:
+   """
    folder_name = os.path.basename(os.path.normpath(output_location))
    download_link = 'https://arsf-dandev.nerc.ac.uk/processor/downloads/%s?&project=%s' % (folder_name, project)
 
@@ -63,31 +71,44 @@ def email_PI(pi_email, output_location, project):
 
 
 def status_update(status_file, newstage, line):
+   """
+   updates the status files with a new stage or completion
+   :param status_file:
+   :param newstage:
+   :param line:
+   :return:
+   """
    open(status_file, 'w').write("%s = %s" % (line, newstage))
 
-
-# def #error_write(output_location, error, line_name):
-#    error_file = open(output_location + ERROR_DIR + line_name + "_error.txt", 'w')
-#    error_file.write(str(error))
-#
-#
-# def #logger(log, line_name, output_location):
-#    logfile = open(output_location + LOG_DIR + line_name + "_log.txt", 'a')
-#    logfile.write(str(str(log)))
-
-
 def process_web_hyper_line(config_file, line_name, output_location):
+   """
+   Main function, takes a line and processes it through APL, generates a log file for each line with the output from APL
+
+   This will stop if a file is not produced by APL for whatever reason.
+
+   :param config_file:
+   :param line_name:
+   :param output_location:
+   :return:
+   """
+   #set up logging
    logger = logging.getLogger()
    file_handler = FileHandler(output_location + LOG_DIR + line_name + "_log.txt", mode='a')
    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
    file_handler.setFormatter(formatter)
    logger.addHandler(file_handler)
    logger.setLevel(logging.DEBUG)
+
+   #read the config
    config = ConfigParser.RawConfigParser()
    config.read(config_file)
+
+   #get the line section we want
    line_details = dict(config.items(line_name))
    line_number = str(line_name[-2:])
    status_file = STATUS_FILE % (output_location, line_name)
+
+   #set our first status
    open(status_file, 'w+').write("%s = %s" % (line_name, INITIAL_STATUS))
 
    if len(line_details["julianday"]) == 2:
@@ -104,6 +125,7 @@ def process_web_hyper_line(config_file, line_name, output_location):
    elif line_name[:1] in "e":
       sensor = "eagle"
 
+   #set up folders
    folder = folder_structure.FolderStructure(year=line_details["year"],
                                              jday=jday,
                                              projectCode=line_details["project_code"],
@@ -132,18 +154,22 @@ def process_web_hyper_line(config_file, line_name, output_location):
 
    projection = line_details["projection"]
 
+   #set new status to masking
    status_update(status_file, "aplmask", line_name)
 
+   #create output file name
    masked_file = output_location + WEB_MASK_OUTPUT + line_name + "_masked.bil"
 
+   #generate masking command
    aplmask_cmd = ["aplmask"]
    aplmask_cmd.extend(["-lev1", lev1file])
    aplmask_cmd.extend(["-mask", maskfile])
    aplmask_cmd.extend(["-output", masked_file])
 
+   #try running the command and except on failure
    try:
       log = common_functions.CallSubprocessOn(aplmask_cmd, redirect=True)
-      #logger(log, line_name, output_location)
+      #got to do it by line because of largish contents
       for line in log[1]:
          logger.info(str(line))
       if not os.path.exists(masked_file):
@@ -151,14 +177,15 @@ def process_web_hyper_line(config_file, line_name, output_location):
    except Exception, e:
       status_update(status_file, "ERROR - aplmask", line_name)
       logger.error([e, line_name])
-      # #error_write(output_location, e, line_name)
       exit(1)
 
    status_update(status_file, "aplcorr", line_name)
 
+   #create filenames
    igm_file = output_location + WEB_IGM_OUTPUT + line_name + ".igm"
    nav_file = glob.glob(hyper_delivery + NAVIGATION_FOLDER + line_name + "*_nav_post_processed.bil")[0]
 
+   #aplcorr command
    aplcorr_cmd = ["aplcorr"]
    aplcorr_cmd.extend(["-lev1file", lev1file])
    aplcorr_cmd.extend(["-navfile", nav_file])
@@ -179,6 +206,7 @@ def process_web_hyper_line(config_file, line_name, output_location):
       #error_write(output_location, e, line_name)
       exit(1)
 
+   #set up projection strings
    if "UTM" in line_details["projection"]:
       zone = line_details["projection"].split(" ")[2]
       hemisphere=zone[2:]
@@ -198,6 +226,7 @@ def process_web_hyper_line(config_file, line_name, output_location):
 
    status_update(status_file, "apltran", line_name)
 
+   #build the transformation command, its worth running this just in case
    apltran_cmd = ["apltran"]
    apltran_cmd.extend(["-inproj", "latlong", "WGS84"])
    apltran_cmd.extend(["-igm", igm_file])
@@ -222,6 +251,7 @@ def process_web_hyper_line(config_file, line_name, output_location):
 
    status_update(status_file, "aplmap", line_name)
 
+   #set pixel size and map name
    pixelx, pixely = line_details["pixelsize"].split(" ")
 
    mapname = output_location + WEB_MAPPED_OUTPUT + line_name + "3b_mapped.bil"
@@ -264,6 +294,7 @@ def process_web_hyper_line(config_file, line_name, output_location):
    status_update(status_file, "zipping", line_name)
 
    with zipfile.ZipFile(mapname + ".zip", 'w', zipfile.ZIP_DEFLATED, allowZip64=True) as zip:
+      #compress the mapped file
       zip.write(mapname, os.path.basename(mapname))
       zip.write(mapname + ".hdr", os.path.basename(mapname + ".hdr"))
       zip.close()
@@ -273,6 +304,7 @@ def process_web_hyper_line(config_file, line_name, output_location):
 
    status_update(status_file, "complete", line_name)
 
+   #if all the files are complete its time to zip them together
    all_check = True
    for status in os.listdir(output_location + STATUS_DIR):
       for l in open(output_location + STATUS_DIR + status):

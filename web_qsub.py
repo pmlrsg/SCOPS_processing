@@ -27,6 +27,17 @@ QUEUE = "lowpriority.q"
 
 
 def web_structure(project_code, jday, year, sortie=None, output_name=None):
+   """
+   Builds the structure for a web job to output to
+
+   :param project_code:
+   :param jday:
+   :param year:
+   :param sortie:
+   :param output_name:
+   :return: folder location
+   """
+   #if there isnt an output name generate one from the time and day/year/project
    if output_name is not None:
       folder_base = output_name
    else:
@@ -36,6 +47,7 @@ def web_structure(project_code, jday, year, sortie=None, output_name=None):
       else:
          folder_base = WEB_OUTPUT + project_code + '_' + year + '_' + jday + datetime.datetime.now().strftime(
             '%Y%m%d%H%M%S')
+   #make the folders
    os.mkdir(folder_base)
    os.mkdir(folder_base + WEB_MASK_OUTPUT)
    os.mkdir(folder_base + WEB_IGM_OUTPUT)
@@ -43,14 +55,26 @@ def web_structure(project_code, jday, year, sortie=None, output_name=None):
    os.mkdir(folder_base + WEB_DEM_FOLDER)
    os.mkdir(folder_base + WEB_STATUS_OUTPUT)
    os.mkdir(folder_base + LOG_DIR)
+   #return the location
    return folder_base
 
 
 def web_qsub(config, local=False, local_threaded=False, output=None):
+   """
+   Submits the job (or processes locally in its current form)
+
+   :param config:
+   :param local:
+   :param local_threaded:
+   :param output:
+   :return:
+   """
    config_file = ConfigParser.RawConfigParser()
    config_file.read(config)
    lines = config_file.sections()
    defaults = config_file.defaults()
+
+   #if the output location doesn't exist yet we should create one
    if output is None or output == '':
       try:
          output_location = config_file.get('DEFAULT', 'output_folder')
@@ -64,17 +88,21 @@ def web_qsub(config, local=False, local_threaded=False, output=None):
    else:
       output_location = output
 
+   #symlink the config file into the processing folder so that we know the source of any problems that arise
    os.symlink(config, output_location + '/' + os.path.basename(config))
 
+   #find out where the files are for the day we are trying to process
    folder = folder_structure.FolderStructure(year=defaults["year"],
                                              jday=defaults["julianday"],
                                              projectCode=defaults["project_code"],
                                              fletter=defaults["sortie"],
                                              absolute=True)
 
+   #locate delivery and navigation files
    hyper_delivery = glob.glob(folder.getProjPath() + "/delivery/*hyperspectral*/")[0]
    nav_folder = glob.glob(hyper_delivery + "flightlines/navigation/")[0]
 
+   #if the dem doesn't exist generate one
    try:
       dem_name = config_file.get('DEFAULT', 'dem_name')
       print dem_name
@@ -87,11 +115,13 @@ def web_qsub(config, local=False, local_threaded=False, output=None):
       dem_nav_utilities.create_apl_dem_from_mosaic(dem_name,
                                                    dem_source=defaults["dem"],
                                                    bil_navigation=nav_folder)
-
+   #update config with the dem name then submit the file to the processor, we don't want the script to run twice so set
+   # submitted to true
    config_file.set('DEFAULT', "dem_name", dem_name)
    config_file.set('DEFAULT', "submitted", True)
    config_file.write(open(config, 'w'))
 
+   #Generate a status file for each line to be processed, these are important later!
    for line in lines:
       status_file = STATUS_FILE % (output_location, line)
       if "true" in dict(config_file.items(line))["process"]:

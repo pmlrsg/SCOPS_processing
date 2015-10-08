@@ -1,6 +1,8 @@
 #! /usr/bin/env python
 __author__ = 'stgo'
-
+"""
+Cron job for web processing, picks up config files and passes them to web qsub
+"""
 
 import sys
 #We need to add these so that crontab has the right path(s)

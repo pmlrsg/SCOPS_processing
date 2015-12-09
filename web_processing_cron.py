@@ -1,7 +1,11 @@
 #! /usr/bin/env python
-__author__ = 'stgo'
 """
 Cron job for web processing, picks up config files and passes them to web qsub
+
+Author: Stephen Goult
+
+Available functions
+main(): finds all config files and tests them for submission requirements.
 """
 
 import sys
@@ -14,13 +18,14 @@ import ConfigParser
 import os
 
 WEB_CONFIG_DIR = "/users/rsg/arsf/web_processing/configs/"
+QSUB_COMMAND = "web_qsub.py"
 
 
 
 def main():
    for configfile in os.listdir(WEB_CONFIG_DIR):
       submit = True
-      config = ConfigParser.RawConfigParser()
+      config = ConfigParser.SafeConfigParser()
       config.read(WEB_CONFIG_DIR + configfile)
 
       if config.get("DEFAULT", "submitted") in "True":
@@ -31,7 +36,7 @@ def main():
 
       if submit:
          # using local until happy that all processing works
-         common_functions.CallSubprocessOn(["/users/rsg/stgo/PycharmProjects/ARSF_web_processor/web_qsub.py", "-c", WEB_CONFIG_DIR + configfile, "--local"])
+         common_functions.CallSubprocessOn([QSUB_COMMAND, "-c", WEB_CONFIG_DIR + configfile, "--local"])
 
 if __name__ == '__main__':
    main()

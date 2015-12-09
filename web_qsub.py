@@ -1,4 +1,18 @@
 #! /usr/bin/env python
+"""
+qsub script to be called by web_processing_cron, receives config files from web process cron and generates a processing
+folder tree/dem before either submitting to the grid or processing locally.
+
+Author: Stephen Goult
+
+Available functions
+web_structure(project_code, jday, year, sortie=None, output_name=None): takes project code, jday and year and optionally
+a sortie or a set folder to generate the folder tree inside
+web_qsub(config, local=False, local_threaded=False, output=None): takes a config file and transforms it to a folder tree
+with a dem file included (unless specified in the config already) will then either process files locally or submit to
+the grid. Uses web_process_apl_line.py
+"""
+
 import os
 import folder_structure
 import common_functions
@@ -6,21 +20,22 @@ import datetime
 import ConfigParser
 import web_process_apl_line
 import argparse
-from arsf_dem import dem_nav_utilities
+import arsf_dem
 import glob
 import logging
 import subprocess
 import sys
+import web_process_apl_line
 
 WEB_OUTPUT = "/users/rsg/arsf/web_processing/processing/"
 WEB_MASK_OUTPUT = "/level1b/"
 WEB_IGM_OUTPUT = "/igm/"
 WEB_MAPPED_OUTPUT = "/mapped/"
 WEB_DEM_FOLDER = "/dem/"
-VIEW_VECTOR_FILE = "/sensor_FOV_vectors/%s_view_vector_list.txt"
+VIEW_VECTOR_FILE = "/sensor_FOV_vectors/{}_view_vector_list.txt"
 OSNG_SEPERATION_FILE = "/users/rsg/arsf/dems/ostn02/OSTN02_NTv2.gsb"
 WEB_STATUS_OUTPUT = "/status"
-STATUS_FILE = "%s/status/%s_status.txt"
+STATUS_FILE = "{}/status/{}_status.txt"
 INITIAL_STATUS = "initialising"
 LOG_DIR = "/logs/"
 QUEUE = "lowpriority.q"
@@ -79,9 +94,10 @@ def web_qsub(config, local=False, local_threaded=False, output=None):
       try:
          output_location = config_file.get('DEFAULT', 'output_folder')
          if not os.path.exists(output_location):
-            raise Exception
-      except Exception, e:
+            raise Exception("specified output location does not exist!")
+      except Exception as e:
          common_functions.ERROR(e)
+         logging.error(e)
          output_location = web_structure(defaults["project_code"], defaults["julianday"], defaults["year"],
                                          defaults["sortie"])
          config_file.set('DEFAULT', 'output_folder', output_location)
@@ -105,14 +121,14 @@ def web_qsub(config, local=False, local_threaded=False, output=None):
    #if the dem doesn't exist generate one
    try:
       dem_name = config_file.get('DEFAULT', 'dem_name')
-      print dem_name
       if not os.path.exists(dem_name):
-         raise Exception
-   except Exception, e:
+         raise Exception("The DEM specified does not exist!")
+   except Exception as e:
       common_functions.ERROR(e)
+      logging.error(e)
       dem_name = (output_location + WEB_DEM_FOLDER + defaults["project_code"] + '_' + defaults["year"] + '_' + defaults[
          "julianday"] + '_' + defaults["projection"] + ".dem").replace(' ', '_')
-      dem_nav_utilities.create_apl_dem_from_mosaic(dem_name,
+      arsf_dem.dem_nav_utilities.create_apl_dem_from_mosaic(dem_name,
                                                    dem_source=defaults["dem"],
                                                    bil_navigation=nav_folder)
    #update config with the dem name then submit the file to the processor, we don't want the script to run twice so set
@@ -123,51 +139,44 @@ def web_qsub(config, local=False, local_threaded=False, output=None):
 
    #Generate a status file for each line to be processed, these are important later!
    for line in lines:
-      status_file = STATUS_FILE % (output_location, line)
+      status_file = STATUS_FILE.format(output_location, line)
       if "true" in dict(config_file.items(line))["process"]:
-         open(status_file, 'w+').write("%s = %s" % (line, "waiting"))
+         open(status_file, 'w+').write("{} = {}".format(line, "waiting"))
       else:
-         open(status_file, 'w+').write("%s = %s" % (line, "not processing"))
+         open(status_file, 'w+').write("{} = {}".format(line, "not processing"))
 
    for line in lines:
       if dict(config_file.items(line))["process"] in "true":
          if local:
             if local_threaded:
                # do threaded processing TODO
+               raise Exception("This still needs to be coded")
                pass
             else:
                try:
                   web_process_apl_line.process_web_hyper_line(config, line, output_location)
-               except:
+              except Exception as e:
+                  logging.error("Could not process job for {}, Reason: {}".format(line, e))
                   continue
          else:
-            commandlist = ["web_process_apl_line"]
-            commandlist.extend(["-l", line])
-            commandlist.extend(["-c", config])
-            commandlist.extend(["-o", output_location])
-            print ' '.join(commandlist)
+            qsub_args = ["qsub"]
+            qsub_args.extend(["-N", "WEB_" + defaults["project_code"] + "_" + line])
+            qsub_args.extend(["-q", QUEUE])
+            qsub_args.extend(["-P", "arsfdan"])
+            qsub_args.extend(["-wd", os.getcwd()])
+            qsub_args.extend(["-e", LOG_DIR])
+            qsub_args.extend(["-o", LOG_DIR])
+            qsub_args.extend(["-m", "n"]) # Don't send mail
+            qsub_args.extend(["-p", "-100"])
+            qsub_args.extend(["-b", "y"])
+            try:
+                qsub = subprocess.Popen(qsub_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            except:
+                logging.error("Could not submit qsub job. Reason: " + str(sys.exc_info()[1]))
+                continue
+            logging.info("line submitted: " + line)
 
-            # qsub_args = ["qsub"]
-            # qsub_args.extend(["-N", "WEB_" + defaults["project_code"] + "_" + line])
-            # qsub_args.extend(["-q", QUEUE])
-            # qsub_args.extend(["-P", "arsfdan"])
-            # qsub_args.extend(["-wd", os.getcwd()])
-            # qsub_args.extend(["-e", LOG_DIR])
-            # qsub_args.extend(["-o", LOG_DIR])
-            # qsub_args.extend(["-m", "n"]) # Don't send mail
-            # qsub_args.extend(["-p", "-100"])
-            # qsub_args.extend(["-b", "y"])
-
-            # finally extend the qsub argument to contain the alsproc command
-            # qsub_args.extend(commandlist)
-            # try:
-            #     qsub = subprocess.Popen(qsub_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            # except:
-            #     print "Could not submit qsub job. Reason: " + str(sys.exc_info()[1])
-            #     continue
-            # print "line submitted"
-
-   print "all lines complete"
+   logging.info("all lines complete")
 
 
 if __name__ == '__main__':

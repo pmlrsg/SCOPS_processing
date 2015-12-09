@@ -1,5 +1,20 @@
 #! /usr/bin/env python
-__author__ = 'stgo'
+"""
+Main processor script for the arsf web processor, will normally be invoked by
+web qsub but can also be used at the command line. This will take a level1b file
+through masking to geocorrection dependant on options set in the config file.
+
+web qsub needs to have produced a folder structure and DEM before this script
+will work properly.
+
+Author: Stephen Goult
+
+Available functions
+email_error: will send an email to arsf-code on failure of processing
+email_PI: will email the PI on completion of processing and zipping with a download_link
+status_update: updates status file with current stage
+process_web_hyper_line: main function, take a config, line name and output folder to run apl in and zip finished files.
+"""
 
 import argparse
 import os
@@ -11,24 +26,22 @@ import zipfile
 import pipes
 import smtplib
 import logging
-from logging import FileHandler
-from email.mime.text import MIMEText
-
-from common_arsf.web_functions import send_email
+import send_email
 
 WEB_MASK_OUTPUT = "/level1b/"
 WEB_IGM_OUTPUT = "/igm/"
 WEB_MAPPED_OUTPUT = "/mapped/"
-VIEW_VECTOR_FILE = "/sensor_FOV_vectors/%s_fov_fullccd_vectors.bil"
+VIEW_VECTOR_FILE = "/sensor_FOV_vectors/{}_fov_fullccd_vectors.bil"
 OSNG_SEPERATION_FILE = "/users/rsg/arsf/dems/ostn02/OSTN02_NTv2.gsb"
 STATUS_DIR = "/status/"
 ERROR_DIR = "/status/"
 LOG_DIR = "/logs/"
-STATUS_FILE = "%s/status/%s_status.txt"
+STATUS_FILE = "{}/status/{}_status.txt"
 INITIAL_STATUS = "initialising"
 NAVIGATION_FOLDER = "/flightlines/navigation/"
 SEND_EMAIL = "arsf-processing@pml.ac.uk"
-ERROR_EMAIL = "arsf-code@pml.ac.uk"
+ERROR_EMAIL = "stgo@pml.ac.uk" #TODO change from stgo!
+DOWNLOAD_LINK = 'https://arsf-dandev.nerc.ac.uk/processor/downloads/{}?&project={}'
 
 def email_error(stage, line, error, processing_folder):
    """
@@ -39,13 +52,13 @@ def email_error(stage, line, error, processing_folder):
    :param processing_folder:
    :return:
    """
-   message = "Processing has failed on line %s at stage %s due to:\n\n" \
-             "%s\n\n" \
-             "The processing is contained in folder %s\n\n" \
+   message = "Processing has failed on line {} at stage {} due to:\n\n" \
+             "{}\n\n" \
+             "The processing is contained in folder {}\n\n" \
              "Once the issue has been resolved update the relevant status file to state either 'complete' or 'waiting to zip' (dependant on what you've done)"
 
-   message = message % (line, stage, error, processing_folder)
-   send_email(message, SEND_EMAIL, ERROR_EMAIL, processing_folder + " ERROR")
+   message = message.format(line, stage, error, processing_folder)
+   common_arsf.web_functions.send_email(message, ERROR_EMAIL, processing_folder + " ERROR", SEND_EMAIL)
 
 
 def email_PI(pi_email, output_location, project):
@@ -58,16 +71,16 @@ def email_PI(pi_email, output_location, project):
    :return:
    """
    folder_name = os.path.basename(os.path.normpath(output_location))
-   download_link = 'https://arsf-dandev.nerc.ac.uk/processor/downloads/%s?&project=%s' % (folder_name, project)
+   download_link = DOWNLOAD_LINK.format(folder_name, project)
 
-   message = 'Processing is complete for your order request %s, you can now download the data from the following location:\n\n' \
-             '%s\n\n' \
+   message = 'Processing is complete for your order request {}, you can now download the data from the following location:\n\n' \
+             '{}\n\n' \
              'The data will be available for a total of two weeks, however this may be extended if requested. If you identify any problems with your data or have issues downloading the data please contact ARSF staff at arsf-processing@pml.ac.uk.\n\n' \
              'Regards,\n' \
              'ARSF'
 
-   message = message % (folder_name, download_link)
-   send_email(message, pi_email, folder_name + " order complete")
+   message = message.format(folder_name, download_link)
+   common_arsf.web_functions.send_email(message, pi_email, folder_name + " order complete", SEND_EMAIL)
 
 
 def status_update(status_file, newstage, line):
@@ -78,7 +91,7 @@ def status_update(status_file, newstage, line):
    :param line:
    :return:
    """
-   open(status_file, 'w').write("%s = %s" % (line, newstage))
+   open(status_file, 'w').write("{} = {}".format(line, newstage))
 
 def process_web_hyper_line(config_file, line_name, output_location):
    """
@@ -93,30 +106,25 @@ def process_web_hyper_line(config_file, line_name, output_location):
    """
    #set up logging
    logger = logging.getLogger()
-   file_handler = FileHandler(output_location + LOG_DIR + line_name + "_log.txt", mode='a')
+   file_handler = logging.FileHandler(output_location + LOG_DIR + line_name + "_log.txt", mode='a')
    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
    file_handler.setFormatter(formatter)
    logger.addHandler(file_handler)
    logger.setLevel(logging.DEBUG)
 
    #read the config
-   config = ConfigParser.RawConfigParser()
+   config = ConfigParser.SafeConfigParser()
    config.read(config_file)
 
    #get the line section we want
    line_details = dict(config.items(line_name))
    line_number = str(line_name[-2:])
-   status_file = STATUS_FILE % (output_location, line_name)
+   status_file = STATUS_FILE.format(output_location, line_name)
 
    #set our first status
-   open(status_file, 'w+').write("%s = %s" % (line_name, INITIAL_STATUS))
+   open(status_file, 'w+').write("{} = {}".format(line_name, INITIAL_STATUS))
 
-   if len(line_details["julianday"]) == 2:
-      jday = str(0) + str(line_details["julianday"])
-   elif len(str(line_details["julianday"])) == 1:
-      jday = str(0) + str(line_details["julianday"])
-   else:
-      jday = line_details["julianday"]
+   jday = "{0:03d}".format(int(line_details["julianday"]))
 
    if line_name[:1] in "f":
       sensor = "fenix"
@@ -154,6 +162,21 @@ def process_web_hyper_line(config_file, line_name, output_location):
 
    projection = line_details["projection"]
 
+   #set up projection strings
+   if "UTM" in line_details["projection"]:
+      zone = line_details["projection"].split(" ")[2]
+      hemisphere=zone[2:]
+
+      zone = zone[:-1]
+
+      projection = pipes.quote("utm_wgs84{}_{}".format(hemisphere, zone))
+   elif "UKBNG" in line_details["projection"]:
+      projection = "osng"
+   else:
+      logger.error("Couldn't find the projection from input string")
+      status_update(status_file, "ERROR - projection not identified", line_name)
+      raise Exception("Unable to identify projection")
+
    #set new status to masking
    status_update(status_file, "aplmask", line_name)
 
@@ -168,13 +191,10 @@ def process_web_hyper_line(config_file, line_name, output_location):
 
    #try running the command and except on failure
    try:
-      log = common_functions.CallSubprocessOn(aplmask_cmd, redirect=True)
-      #got to do it by line because of largish contents
-      for line in log[1]:
-         logger.info(str(line))
+      common_functions.CallSubprocessOn(aplmask_cmd, redirect=False, logger=logger)
       if not os.path.exists(masked_file):
          raise Exception, "masked file not output"
-   except Exception, e:
+   except Exception as e:
       status_update(status_file, "ERROR - aplmask", line_name)
       logger.error([e, line_name])
       exit(1)
@@ -189,37 +209,21 @@ def process_web_hyper_line(config_file, line_name, output_location):
    aplcorr_cmd = ["aplcorr"]
    aplcorr_cmd.extend(["-lev1file", lev1file])
    aplcorr_cmd.extend(["-navfile", nav_file])
-   aplcorr_cmd.extend(["-vvfile", hyper_delivery + VIEW_VECTOR_FILE % sensor])
+   aplcorr_cmd.extend(["-vvfile", hyper_delivery + VIEW_VECTOR_FILE.format(sensor)])
    aplcorr_cmd.extend(["-dem", dem])
    aplcorr_cmd.extend(["-igmfile", igm_file])
 
    try:
-      log = common_functions.CallSubprocessOn(aplcorr_cmd, redirect=True)
-      #logger(log, line_name, output_location)
-      for line in log[1]:
-         logger.info(str(line))
+      common_functions.CallSubprocessOn(aplcorr_cmd, redirect=False, logger=logger)
       if not os.path.exists(igm_file):
          raise Exception, "igm file not output by aplcorr!"
-   except Exception, e:
+   except Exception as e:
       status_update(status_file, "ERROR - aplcorr", line_name)
       logger.error([e, line_name])
       #error_write(output_location, e, line_name)
       exit(1)
 
-   #set up projection strings
-   if "UTM" in line_details["projection"]:
-      zone = line_details["projection"].split(" ")[2]
-      hemisphere=zone[2:]
-
-      zone = zone[:-1]
-
-      projection = pipes.quote("utm_wgs84%s_%s" % (hemisphere, zone))
-   elif "UKBNG" in line_details["projection"]:
-      projection = "osng"
-   else:
-      logger.error("Couldn't find the projection from input string")
-
-   igm_file_transformed = igm_file.replace(".igm", "_%s.igm") % projection.replace(' ', '_')
+   igm_file_transformed = igm_file.replace(".igm", "_{}.igm").format(projection.replace(' ', '_'))
 
    if projection in "osng":
       projection = projection + " " + OSNG_SEPERATION_FILE
@@ -232,18 +236,15 @@ def process_web_hyper_line(config_file, line_name, output_location):
    apltran_cmd.extend(["-igm", igm_file])
    apltran_cmd.extend(["-output", igm_file_transformed])
    if "utm" in projection:
-      apltran_cmd.extend(["-outproj", "utm_wgs84%s" % hemisphere, zone])
+      apltran_cmd.extend(["-outproj", "utm_wgs84{}".format(hemisphere, zone)])
    elif "osng" in projection:
       apltran_cmd.extend(["-outproj", "osng", OSNG_SEPERATION_FILE])
 
    try:
-      log = common_functions.CallSubprocessOn(apltran_cmd, redirect=True)
-      for line in log[1]:
-         logger.info(str(line))
-      #logger(log, line_name, output_location)
+      common_functions.CallSubprocessOn(apltran_cmd, redirect=False, logger=logger)
       if not os.path.exists(igm_file_transformed):
          raise Exception, "igm file not output by apltran!"
-   except Exception, e:
+   except Exception as e:
       status_update(status_file, "ERROR - apltran", line_name)
       logger.error([e, line_name])
       #error_write(output_location, e, line_name)
@@ -265,13 +266,10 @@ def process_web_hyper_line(config_file, line_name, output_location):
    aplmap_cmd.extend(["-mapname", mapname])
 
    try:
-      log = common_functions.CallSubprocessOn(aplmap_cmd, redirect=True)
-      for line in log[1]:
-         logger.info(str(line))
-      #logger(log, line_name, output_location)
+      log = common_functions.CallSubprocessOn(aplmap_cmd, redirect=False, logger=logger)
       if not os.path.exists(mapname):
          raise Exception, "mapped file not output by aplmap!"
-   except Exception, e:
+   except Exception as e:
       status_update(status_file, "ERROR", line_name)
       logger.error([e, line_name])
       ##error_write(output_location, e, line_name)

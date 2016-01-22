@@ -164,18 +164,17 @@ def process_web_hyper_line(config_file, line_name, output_location):
 
    #set up projection strings
    if "UTM" in line_details["projection"]:
-      zone = line_details["projection"].split(" ")[2]
-      hemisphere=zone[2:]
+       zone = line_details["projection"].split(" ")[2]
+       hemisphere=zone[2:]
+       zone = zone[:-1]
 
-      zone = zone[:-1]
-
-      projection = pipes.quote("utm_wgs84{}_{}".format(hemisphere, zone))
+       projection = pipes.quote("utm_wgs84{}_{}".format(hemisphere, zone))
    elif "UKBNG" in line_details["projection"]:
-      projection = "osng"
+       projection = "osng"
    else:
-      logger.error("Couldn't find the projection from input string")
-      status_update(status_file, "ERROR - projection not identified", line_name)
-      raise Exception("Unable to identify projection")
+       logger.error("Couldn't find the projection from input string")
+       status_update(status_file, "ERROR - projection not identified", line_name)
+       raise Exception("Unable to identify projection")
 
    #set new status to masking
    status_update(status_file, "aplmask", line_name)
@@ -191,13 +190,13 @@ def process_web_hyper_line(config_file, line_name, output_location):
 
    #try running the command and except on failure
    try:
-      common_functions.CallSubprocessOn(aplmask_cmd, redirect=False, logger=logger)
-      if not os.path.exists(masked_file):
-         raise Exception, "masked file not output"
+       common_functions.CallSubprocessOn(aplmask_cmd, redirect=False, logger=logger)
+       if not os.path.exists(masked_file):
+           raise Exception, "masked file not output"
    except Exception as e:
-      status_update(status_file, "ERROR - aplmask", line_name)
-      logger.error([e, line_name])
-      exit(1)
+       status_update(status_file, "ERROR - aplmask", line_name)
+       logger.error([e, line_name])
+       exit(1)
 
    status_update(status_file, "aplcorr", line_name)
 
@@ -214,14 +213,14 @@ def process_web_hyper_line(config_file, line_name, output_location):
    aplcorr_cmd.extend(["-igmfile", igm_file])
 
    try:
-      common_functions.CallSubprocessOn(aplcorr_cmd, redirect=False, logger=logger)
-      if not os.path.exists(igm_file):
-         raise Exception, "igm file not output by aplcorr!"
+       common_functions.CallSubprocessOn(aplcorr_cmd, redirect=False, logger=logger)
+       if not os.path.exists(igm_file):
+           raise Exception, "igm file not output by aplcorr!"
    except Exception as e:
-      status_update(status_file, "ERROR - aplcorr", line_name)
-      logger.error([e, line_name])
-      #error_write(output_location, e, line_name)
-      exit(1)
+       status_update(status_file, "ERROR - aplcorr", line_name)
+       logger.error([e, line_name])
+       #error_write(output_location, e, line_name)
+       exit(1)
 
    igm_file_transformed = igm_file.replace(".igm", "_{}.igm").format(projection.replace(' ', '_'))
 
@@ -270,7 +269,7 @@ def process_web_hyper_line(config_file, line_name, output_location):
       if not os.path.exists(mapname):
          raise Exception, "mapped file not output by aplmap!"
    except Exception as e:
-      status_update(status_file, "ERROR", line_name)
+      status_update(status_file, "ERROR - aplmap", line_name)
       logger.error([e, line_name])
       ##error_write(output_location, e, line_name)
       exit(1)

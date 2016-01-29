@@ -26,7 +26,9 @@ import zipfile
 import pipes
 import smtplib
 import logging
-import send_email
+import re
+import bandmath
+from common_arsf.web_functions import send_email
 
 WEB_MASK_OUTPUT = "/level1b/"
 WEB_IGM_OUTPUT = "/igm/"
@@ -93,38 +95,14 @@ def status_update(status_file, newstage, line):
    """
    open(status_file, 'w').write("{} = {}".format(line, newstage))
 
-def process_web_hyper_line(config_file, line_name, output_location):
-   """
-   Main function, takes a line and processes it through APL, generates a log file for each line with the output from APL
-
-   This will stop if a file is not produced by APL for whatever reason.
-
-   :param config_file:
-   :param line_name:
-   :param output_location:
-   :return:
-   """
-   #set up logging
-   logger = logging.getLogger()
-   file_handler = logging.FileHandler(output_location + LOG_DIR + line_name + "_log.txt", mode='a')
-   formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-   file_handler.setFormatter(formatter)
-   logger.addHandler(file_handler)
-   logger.setLevel(logging.DEBUG)
-
+def line_handler(config_file, line_name, output_location, process_main_line, process_band_ratio):
    #read the config
    config = ConfigParser.SafeConfigParser()
    config.read(config_file)
-
-   #get the line section we want
    line_details = dict(config.items(line_name))
-   line_number = str(line_name[-2:])
-   status_file = STATUS_FILE.format(output_location, line_name)
-
-   #set our first status
-   open(status_file, 'w+').write("{} = {}".format(line_name, INITIAL_STATUS))
-
+   #set up folders
    jday = "{0:03d}".format(int(line_details["julianday"]))
+   line_number = str(line_name[-2:])
 
    if line_name[:1] in "f":
       sensor = "fenix"
@@ -132,8 +110,6 @@ def process_web_hyper_line(config_file, line_name, output_location):
       sensor = "hawk"
    elif line_name[:1] in "e":
       sensor = "eagle"
-
-   #set up folders
    folder = folder_structure.FolderStructure(year=line_details["year"],
                                              jday=jday,
                                              projectCode=line_details["project_code"],
@@ -158,7 +134,71 @@ def process_web_hyper_line(config_file, line_name, output_location):
 
    lev1file = folder.getLev1File(delivery=True)
    maskfile = lev1file.replace(".bil", "_mask.bil")
+   band_list = config.get(line_name, 'band_range')
+   if process_main_line:
+      process_web_hyper_line(config, line_name, os.path.basename(lev1file), band_list, output_location, lev1file, hyper_delivery, input_lev1_file=None)
+
+   if process_band_ratio:
+      equations = [x for x in dict(config.items(line_name)) if "eq_" in x]
+      for eq_name in equations:
+         if config.get(line_name, eq_name) in "True":
+            print "basooning"
+            equation = config.get('DEFAULT', eq_name)
+            band_numbers = re.findall(r'band(\d{3})', equation)
+            output_location_updated = output_location + "/level1b"
+            bm_file, bands = bandmath.bandmath(lev1file, equation, output_location_updated, band_numbers, eqname=eq_name.replace("eq_", "_"), maskfile=maskfile)
+            if bands > 1:
+               band_list = config.get(line_name, 'band_range')
+            else:
+               band_list = "1"
+            bandmath_maskfile = bm_file.replace(".bil", "_mask.bil")
+            process_web_hyper_line(config, line_name, os.path.basename(bm_file), band_list, output_location, lev1file, hyper_delivery, input_lev1_file=bm_file, maskfile=bandmath_maskfile)
+
+
+def process_web_hyper_line(config, base_line_name, output_line_name, band_list, output_location, lev1file, hyper_delivery, input_lev1_file=None, skip_stages=[], maskfile=None):
+   """
+   Main function, takes a line and processes it through APL, generates a log file for each line with the output from APL
+
+   This will stop if a file is not produced by APL for whatever reason.
+
+   :param config_file:
+   :param base_line_name:
+   :param output_line_name:
+   :param output_location:
+   :return:
+   """
+   #set up logging
+   logger = logging.getLogger()
+   output_line_name = output_line_name.replace(".","").replace("bil", "").replace("1b","")
+   file_handler = logging.FileHandler(output_location + LOG_DIR + output_line_name.replace("1b.bil","") + "_log.txt", mode='a')
+   formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+   file_handler.setFormatter(formatter)
+   logger.addHandler(file_handler)
+   logger.setLevel(logging.DEBUG)
+
+   #get the line section we want
+   line_details = dict(config.items(base_line_name))
+   line_number = str(base_line_name[-2:])
+   status_file = STATUS_FILE.format(output_location, output_line_name.replace("1b.bil", ""))
+
+   #set our first status
+   open(status_file, 'w+').write("{} = {}".format(output_line_name, INITIAL_STATUS))
+
+   jday = "{0:03d}".format(int(line_details["julianday"]))
+
+   if base_line_name[:1] in "f":
+      sensor = "fenix"
+   elif base_line_name[:1] in "h":
+      sensor = "hawk"
+   elif base_line_name[:1] in "e":
+      sensor = "eagle"
+
+   if maskfile is None:
+      maskfile = lev1file.replace(".bil", "_mask.bil")
    dem = line_details["dem_name"]
+
+   if input_lev1_file is None:
+      input_lev1_file = lev1file
 
    projection = line_details["projection"]
 
@@ -173,61 +213,63 @@ def process_web_hyper_line(config_file, line_name, output_location):
        projection = "osng"
    else:
        logger.error("Couldn't find the projection from input string")
-       status_update(status_file, "ERROR - projection not identified", line_name)
+       status_update(status_file, "ERROR - projection not identified", output_line_name)
        raise Exception("Unable to identify projection")
 
    #set new status to masking
-   status_update(status_file, "aplmask", line_name)
+   status_update(status_file, "aplmask", output_line_name)
 
    #create output file name
-   masked_file = output_location + WEB_MASK_OUTPUT + line_name + "_masked.bil"
+   masked_file = output_location + WEB_MASK_OUTPUT + output_line_name.replace(".bil","") + "_masked.bil"
 
-   #generate masking command
-   aplmask_cmd = ["aplmask"]
-   aplmask_cmd.extend(["-lev1", lev1file])
-   aplmask_cmd.extend(["-mask", maskfile])
-   aplmask_cmd.extend(["-output", masked_file])
+   if not "masking" in skip_stages:
+      #generate masking command
+      aplmask_cmd = ["aplmask"]
+      aplmask_cmd.extend(["-lev1", input_lev1_file])
+      aplmask_cmd.extend(["-mask", maskfile])
+      aplmask_cmd.extend(["-output", masked_file])
 
-   #try running the command and except on failure
-   try:
-       common_functions.CallSubprocessOn(aplmask_cmd, redirect=False, logger=logger)
-       if not os.path.exists(masked_file):
-           raise Exception, "masked file not output"
-   except Exception as e:
-       status_update(status_file, "ERROR - aplmask", line_name)
-       logger.error([e, line_name])
-       exit(1)
+      #try running the command and except on failure
+      try:
+          common_functions.CallSubprocessOn(aplmask_cmd, redirect=False, logger=logger)
+          if not os.path.exists(masked_file):
+              raise Exception, "masked file not output"
+      except Exception as e:
+          status_update(status_file, "ERROR - aplmask", output_line_name)
+          logger.error([e, output_line_name])
+          exit(1)
 
-   status_update(status_file, "aplcorr", line_name)
+   status_update(status_file, "aplcorr", output_line_name)
 
    #create filenames
-   igm_file = output_location + WEB_IGM_OUTPUT + line_name + ".igm"
-   nav_file = glob.glob(hyper_delivery + NAVIGATION_FOLDER + line_name + "*_nav_post_processed.bil")[0]
+   igm_file = output_location + WEB_IGM_OUTPUT + base_line_name + ".igm"
+   nav_file = glob.glob(hyper_delivery + NAVIGATION_FOLDER + base_line_name + "*_nav_post_processed.bil")[0]
 
    #aplcorr command
-   aplcorr_cmd = ["aplcorr"]
-   aplcorr_cmd.extend(["-lev1file", lev1file])
-   aplcorr_cmd.extend(["-navfile", nav_file])
-   aplcorr_cmd.extend(["-vvfile", hyper_delivery + VIEW_VECTOR_FILE.format(sensor)])
-   aplcorr_cmd.extend(["-dem", dem])
-   aplcorr_cmd.extend(["-igmfile", igm_file])
+   if not os.path.exists(igm_file):
+      aplcorr_cmd = ["aplcorr"]
+      aplcorr_cmd.extend(["-lev1file", lev1file])
+      aplcorr_cmd.extend(["-navfile", nav_file])
+      aplcorr_cmd.extend(["-vvfile", hyper_delivery + VIEW_VECTOR_FILE.format(sensor)])
+      aplcorr_cmd.extend(["-dem", dem])
+      aplcorr_cmd.extend(["-igmfile", igm_file])
 
-   try:
-       common_functions.CallSubprocessOn(aplcorr_cmd, redirect=False, logger=logger)
-       if not os.path.exists(igm_file):
-           raise Exception, "igm file not output by aplcorr!"
-   except Exception as e:
-       status_update(status_file, "ERROR - aplcorr", line_name)
-       logger.error([e, line_name])
-       #error_write(output_location, e, line_name)
-       exit(1)
+      try:
+          common_functions.CallSubprocessOn(aplcorr_cmd, redirect=False, logger=logger)
+          if not os.path.exists(igm_file):
+              raise Exception, "igm file not output by aplcorr!"
+      except Exception as e:
+          status_update(status_file, "ERROR - aplcorr", output_line_name)
+          logger.error([e, output_line_name])
+          #error_write(output_location, e,output_line_name)
+          exit(1)
 
    igm_file_transformed = igm_file.replace(".igm", "_{}.igm").format(projection.replace(' ', '_'))
 
    if projection in "osng":
       projection = projection + " " + OSNG_SEPERATION_FILE
 
-   status_update(status_file, "apltran", line_name)
+   status_update(status_file, "apltran", output_line_name)
 
    #build the transformation command, its worth running this just in case
    apltran_cmd = ["apltran"]
@@ -244,23 +286,23 @@ def process_web_hyper_line(config_file, line_name, output_location):
       if not os.path.exists(igm_file_transformed):
          raise Exception, "igm file not output by apltran!"
    except Exception as e:
-      status_update(status_file, "ERROR - apltran", line_name)
-      logger.error([e, line_name])
-      #error_write(output_location, e, line_name)
+      status_update(status_file, "ERROR - apltran", output_line_name)
+      logger.error([e,output_line_name])
+      #error_write(output_location, e,output_line_name)
       exit(1)
 
-   status_update(status_file, "aplmap", line_name)
+   status_update(status_file, "aplmap", output_line_name)
 
    #set pixel size and map name
    pixelx, pixely = line_details["pixelsize"].split(" ")
 
-   mapname = output_location + WEB_MAPPED_OUTPUT + line_name + "3b_mapped.bil"
+   mapname = output_location + WEB_MAPPED_OUTPUT +output_line_name + "3b_mapped.bil"
 
    aplmap_cmd = ["aplmap"]
    aplmap_cmd.extend(["-igm", igm_file_transformed])
    aplmap_cmd.extend(["-lev1", masked_file])
    aplmap_cmd.extend(["-pixelsize", pixelx, pixely])
-   aplmap_cmd.extend(["-bandlist", line_details["band_range"]])
+   aplmap_cmd.extend(["-bandlist", band_list])
    aplmap_cmd.extend(["-interpolation", line_details["interpolation"]])
    aplmap_cmd.extend(["-mapname", mapname])
 
@@ -269,12 +311,12 @@ def process_web_hyper_line(config_file, line_name, output_location):
       if not os.path.exists(mapname):
          raise Exception, "mapped file not output by aplmap!"
    except Exception as e:
-      status_update(status_file, "ERROR - aplmap", line_name)
-      logger.error([e, line_name])
-      ##error_write(output_location, e, line_name)
+      status_update(status_file, "ERROR - aplmap", output_line_name)
+      logger.error([e,output_line_name])
+      ##error_write(output_location, e,output_line_name)
       exit(1)
 
-   status_update(status_file, "waiting to zip", line_name)
+   status_update(status_file, "waiting to zip", output_line_name)
 
    waiting = True
 
@@ -288,7 +330,7 @@ def process_web_hyper_line(config_file, line_name, output_location):
       if not stillwaiting:
          waiting = False
 
-   status_update(status_file, "zipping", line_name)
+   status_update(status_file, "zipping", output_line_name)
 
    with zipfile.ZipFile(mapname + ".zip", 'w', zipfile.ZIP_DEFLATED, allowZip64=True) as zip:
       #compress the mapped file
@@ -296,10 +338,10 @@ def process_web_hyper_line(config_file, line_name, output_location):
       zip.write(mapname + ".hdr", os.path.basename(mapname + ".hdr"))
       zip.close()
 
-   logger.info(str("zipped " + line_name + " to " + mapname + ".zip" + " at " + output_location))
+   logger.info(str("zipped " + output_line_name + " to " + mapname + ".zip" + " at " + output_location))
    #logger("zipped to " + mapname + ".zip", line_name, output_location)
 
-   status_update(status_file, "complete", line_name)
+   status_update(status_file, "complete", output_line_name)
 
    #if all the files are complete its time to zip them together
    all_check = True
@@ -353,4 +395,4 @@ if __name__ == '__main__':
                        metavar="<folder>")
    args = parser.parse_args()
 
-   process_web_hyper_line(args.config, args.line, args.output)
+   line_handler(args.config, args.line, args.output)

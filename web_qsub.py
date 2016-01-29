@@ -105,7 +105,10 @@ def web_qsub(config, local=False, local_threaded=False, output=None):
       output_location = output
 
    #symlink the config file into the processing folder so that we know the source of any problems that arise
-   os.symlink(config, output_location + '/' + os.path.basename(config))
+   if os.path.exists(output_location + '/' + os.path.basename(config)):
+      pass
+   else:
+      os.symlink(config, output_location + '/' + os.path.basename(config))
 
    #find out where the files are for the day we are trying to process
    folder = folder_structure.FolderStructure(year=defaults["year"],
@@ -144,9 +147,25 @@ def web_qsub(config, local=False, local_threaded=False, output=None):
          open(status_file, 'w+').write("{} = {}".format(line, "waiting"))
       else:
          open(status_file, 'w+').write("{} = {}".format(line, "not processing"))
+      equations = [x for x in dict(config_file.items('DEFAULT')) if "eq_" in x]
+      if len(equations) > 0:
+         for equation in equations:
+            print line
+            if config_file.has_option(line, equation):
+               if config_file.get(line, equation) in "True":
+                  bm_status_file = STATUS_FILE.format(output_location, line + equation.replace("eq_", "_"))
+                  open(bm_status_file, 'w+').write("{} = {}".format((line + equation.replace("eq_", "_")), "waiting"))
 
    for line in lines:
+      band_ratio = False
+      main_line = False
       if dict(config_file.items(line))["process"] in "true":
+         main_line = True
+
+      if len([x for x in dict(config_file.items(line)) if "eq_" in x]) > 0:
+         band_ratio = True
+
+      if main_line or band_ratio:
          if local:
             if local_threaded:
                # do threaded processing TODO
@@ -154,8 +173,8 @@ def web_qsub(config, local=False, local_threaded=False, output=None):
                pass
             else:
                try:
-                  web_process_apl_line.process_web_hyper_line(config, line, output_location)
-              except Exception as e:
+                  web_process_apl_line.line_handler(config, line, output_location, main_line, band_ratio)
+               except Exception as e:
                   logging.error("Could not process job for {}, Reason: {}".format(line, e))
                   continue
          else:

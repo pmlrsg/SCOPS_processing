@@ -34,6 +34,10 @@ def main():
       if config.get("DEFAULT", "confirmed") in "False":
          submit = False
 
+      if config.get("DEFAULT", "bandratio") in "True":
+         if config.get("DEFUALT", "bandratioset") in "False" and config.get("DEFAULT", "bandratiomappedset") in "False":
+            submit = False
+
       if submit:
          # using local until happy that all processing works
          common_functions.CallSubprocessOn([QSUB_COMMAND, "-c", WEB_CONFIG_DIR + configfile, "--local"])

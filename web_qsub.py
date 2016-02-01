@@ -36,10 +36,10 @@ VIEW_VECTOR_FILE = "/sensor_FOV_vectors/{}_view_vector_list.txt"
 OSNG_SEPERATION_FILE = "/users/rsg/arsf/dems/ostn02/OSTN02_NTv2.gsb"
 WEB_STATUS_OUTPUT = "/status"
 STATUS_FILE = "{}/status/{}_status.txt"
+LOG_FILE = "{}/logs/{}_log.txt"
 INITIAL_STATUS = "initialising"
 LOG_DIR = "/logs/"
 QUEUE = "lowpriority.q"
-
 
 def web_structure(project_code, jday, year, sortie=None, output_name=None):
    """
@@ -56,7 +56,7 @@ def web_structure(project_code, jday, year, sortie=None, output_name=None):
    if output_name is not None:
       folder_base = output_name
    else:
-      if sortie is not None:
+      if sortie is not "None":
          folder_base = WEB_OUTPUT + project_code + '_' + year + '_' + jday + sortie + datetime.datetime.now().strftime(
             '%Y%m%d%H%M%S')
       else:
@@ -89,6 +89,7 @@ def web_qsub(config, local=False, local_threaded=False, output=None):
    lines = config_file.sections()
    defaults = config_file.defaults()
 
+
    #if the output location doesn't exist yet we should create one
    if output is None or output == '':
       try:
@@ -96,10 +97,12 @@ def web_qsub(config, local=False, local_threaded=False, output=None):
          if not os.path.exists(output_location):
             raise Exception("specified output location does not exist!")
       except Exception as e:
-         common_functions.ERROR(e)
-         logging.error(e)
+         logging.info(e)
+         sortie = defaults["sortie"]
+         if sortie == "None":
+            sortie=''
          output_location = web_structure(defaults["project_code"], defaults["julianday"], defaults["year"],
-                                         defaults["sortie"])
+                           sortie)
          config_file.set('DEFAULT', 'output_folder', output_location)
    else:
       output_location = output
@@ -110,11 +113,14 @@ def web_qsub(config, local=False, local_threaded=False, output=None):
    else:
       os.symlink(config, output_location + '/' + os.path.basename(config))
 
+   sortie=defaults["sortie"]
+   if sortie == "None":
+      sortie=''
    #find out where the files are for the day we are trying to process
    folder = folder_structure.FolderStructure(year=defaults["year"],
                                              jday=defaults["julianday"],
                                              projectCode=defaults["project_code"],
-                                             fletter=defaults["sortie"],
+                                             fletter=sortie,
                                              absolute=True)
 
    #locate delivery and navigation files
@@ -143,18 +149,22 @@ def web_qsub(config, local=False, local_threaded=False, output=None):
    #Generate a status file for each line to be processed, these are important later!
    for line in lines:
       status_file = STATUS_FILE.format(output_location, line)
+      log_file = LOG_FILE.format(output_location, line)
       if "true" in dict(config_file.items(line))["process"]:
          open(status_file, 'w+').write("{} = {}".format(line, "waiting"))
+         open(log_file, mode="a").close()
       else:
          open(status_file, 'w+').write("{} = {}".format(line, "not processing"))
       equations = [x for x in dict(config_file.items('DEFAULT')) if "eq_" in x]
       if len(equations) > 0:
          for equation in equations:
-            print line
             if config_file.has_option(line, equation):
                if config_file.get(line, equation) in "True":
                   bm_status_file = STATUS_FILE.format(output_location, line + equation.replace("eq_", "_"))
                   open(bm_status_file, 'w+').write("{} = {}".format((line + equation.replace("eq_", "_")), "waiting"))
+
+
+   web_process_apl_line.email_status(defaults["email"], output_location, defaults["project_code"])
 
    for line in lines:
       band_ratio = False

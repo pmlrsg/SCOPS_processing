@@ -18,7 +18,7 @@ import ConfigParser
 import os
 
 WEB_CONFIG_DIR = "/users/rsg/arsf/web_processing/configs/"
-QSUB_COMMAND = "web_qsub.py"
+QSUB_COMMAND = "/users/rsg/stgo/PycharmProjects/ARSF_web_processor/web_qsub.py"
 
 
 
@@ -26,7 +26,7 @@ def main():
    for configfile in os.listdir(WEB_CONFIG_DIR):
       submit = True
       config = ConfigParser.SafeConfigParser()
-      config.read(WEB_CONFIG_DIR + configfile)
+      config.read(WEB_CONFIG_DIR + "/" + configfile)
 
       if config.get("DEFAULT", "submitted") in "True":
          submit = False
@@ -35,12 +35,12 @@ def main():
          submit = False
 
       if config.get("DEFAULT", "bandratio") in "True":
-         if config.get("DEFUALT", "bandratioset") in "False" and config.get("DEFAULT", "bandratiomappedset") in "False":
+         if config.get("DEFAULT", "bandratioset") in "False" and config.get("DEFAULT", "bandratiomappedset") in "False":
             submit = False
 
       if submit:
          # using local until happy that all processing works
-         common_functions.CallSubprocessOn([QSUB_COMMAND, "-c", WEB_CONFIG_DIR + configfile, "--local"])
+         common_functions.CallSubprocessOn([QSUB_COMMAND, "-c", WEB_CONFIG_DIR + "/" + configfile, "--local"])
 
 if __name__ == '__main__':
    main()

@@ -28,6 +28,7 @@ import smtplib
 import logging
 import re
 import bandmath
+import common_arsf
 from common_arsf.web_functions import send_email
 
 WEB_MASK_OUTPUT = "/level1b/"
@@ -44,6 +45,7 @@ NAVIGATION_FOLDER = "/flightlines/navigation/"
 SEND_EMAIL = "arsf-processing@pml.ac.uk"
 ERROR_EMAIL = "stgo@pml.ac.uk" #TODO change from stgo!
 DOWNLOAD_LINK = 'https://arsf-dandev.nerc.ac.uk/processor/downloads/{}?&project={}'
+STATUS_LINK = 'https://arsf-dandev.nerc.ac.uk/processor/status/{}?&project={}'
 
 def email_error(stage, line, error, processing_folder):
    """
@@ -84,6 +86,18 @@ def email_PI(pi_email, output_location, project):
    message = message.format(folder_name, download_link)
    common_arsf.web_functions.send_email(message, pi_email, folder_name + " order complete", SEND_EMAIL)
 
+def email_status(pi_email, output_location, project):
+   output_location = os.path.basename(os.path.normpath(output_location))
+   status_link = STATUS_LINK.format(output_location, project)
+   message = "This is to notify you that your ARSF data order has begun processing. You can track its progress at the following URL:\n\n" \
+             "{}\n\n" \
+             "You will receive a final email once all data has completed processing\n"\
+             "Regards,\n"\
+             "ARSF"
+
+   message=message.format(status_link)
+   common_arsf.web_functions.send_email(message, pi_email, output_location + " order processing", SEND_EMAIL)
+
 
 def status_update(status_file, newstage, line):
    """
@@ -100,6 +114,8 @@ def line_handler(config_file, line_name, output_location, process_main_line, pro
    config = ConfigParser.SafeConfigParser()
    config.read(config_file)
    line_details = dict(config.items(line_name))
+   if output_location is None:
+      output_location = line_details["output_folder"]
    #set up folders
    jday = "{0:03d}".format(int(line_details["julianday"]))
    line_number = str(line_name[-2:])
@@ -110,10 +126,14 @@ def line_handler(config_file, line_name, output_location, process_main_line, pro
       sensor = "hawk"
    elif line_name[:1] in "e":
       sensor = "eagle"
+
+   sortie = line_details["sortie"]
+   if sortie == "None":
+      sortie = ''
    folder = folder_structure.FolderStructure(year=line_details["year"],
                                              jday=jday,
                                              projectCode=line_details["project_code"],
-                                             fletter=line_details["sortie"],
+                                             fletter=sortie,
                                              lineId=line_number,
                                              lineNumber=line_number,
                                              sct=1,
@@ -124,7 +144,7 @@ def line_handler(config_file, line_name, output_location, process_main_line, pro
    folder = folder_structure.FolderStructure(year=line_details["year"],
                                              jday=jday,
                                              projectCode=line_details["project_code"],
-                                             fletter=line_details["sortie"],
+                                             fletter=sortie,
                                              lineId=line_number,
                                              lineNumber=line_number,
                                              sct=1,
@@ -142,7 +162,6 @@ def line_handler(config_file, line_name, output_location, process_main_line, pro
       equations = [x for x in dict(config.items(line_name)) if "eq_" in x]
       for eq_name in equations:
          if config.get(line_name, eq_name) in "True":
-            print "basooning"
             equation = config.get('DEFAULT', eq_name)
             band_numbers = re.findall(r'band(\d{3})', equation)
             output_location_updated = output_location + "/level1b"
@@ -277,7 +296,7 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
    apltran_cmd.extend(["-igm", igm_file])
    apltran_cmd.extend(["-output", igm_file_transformed])
    if "utm" in projection:
-      apltran_cmd.extend(["-outproj", "utm_wgs84{}".format(hemisphere, zone)])
+      apltran_cmd.extend(["-outproj", "utm_wgs84{}".format(hemisphere), zone])
    elif "osng" in projection:
       apltran_cmd.extend(["-outproj", "osng", OSNG_SEPERATION_FILE])
 
@@ -393,6 +412,16 @@ if __name__ == '__main__':
                        help='base output folder, should reflect the structure built by web_structure() in web_qsub.py',
                        default=None,
                        metavar="<folder>")
+   parser.add_argument('--main',
+                       '-m',
+                       help='process main line',
+                       action="store_true",
+                       dest="main")
+   parser.add_argument('--bandmath',
+                       '-b',
+                       help='process main line',
+                       action="store_true",
+                       dest="bandmath")
    args = parser.parse_args()
 
-   line_handler(args.config, args.line, args.output)
+   line_handler(args.config, args.line, args.output, args.main, args.bandmath)

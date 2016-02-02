@@ -192,6 +192,7 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
    file_handler = logging.FileHandler(output_location + LOG_DIR + output_line_name.replace("1b.bil","") + "_log.txt", mode='a')
    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
    file_handler.setFormatter(formatter)
+   logger.handlers = []
    logger.addHandler(file_handler)
    logger.setLevel(logging.DEBUG)
 

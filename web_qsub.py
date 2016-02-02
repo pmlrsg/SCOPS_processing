@@ -111,7 +111,7 @@ def web_qsub(config, local=False, local_threaded=False, output=None):
    if os.path.exists(output_location + '/' + os.path.basename(config)):
       pass
    else:
-      os.symlink(config, output_location + '/' + os.path.basename(config))
+      os.symlink(os.path.abspath(config), output_location + '/' + os.path.basename(config))
 
    sortie=defaults["sortie"]
    if sortie == "None":
@@ -156,12 +156,17 @@ def web_qsub(config, local=False, local_threaded=False, output=None):
       else:
          open(status_file, 'w+').write("{} = {}".format(line, "not processing"))
       equations = [x for x in dict(config_file.items('DEFAULT')) if "eq_" in x]
+      print equations
       if len(equations) > 0:
          for equation in equations:
+            print equation
             if config_file.has_option(line, equation):
                if config_file.get(line, equation) in "True":
                   bm_status_file = STATUS_FILE.format(output_location, line + equation.replace("eq_", "_"))
+                  bm_log_file =  LOG_FILE.format(output_location, line + equation.replace("eq_", "_"))
                   open(bm_status_file, 'w+').write("{} = {}".format((line + equation.replace("eq_", "_")), "waiting"))
+                  open(bm_log_file, mode="a").close()
+
 
 
    web_process_apl_line.email_status(defaults["email"], output_location, defaults["project_code"])

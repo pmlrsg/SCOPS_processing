@@ -383,7 +383,7 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
          "year"] + jday + '.zip', 'a', zipfile.ZIP_DEFLATED, allowZip64=True) as zip:
          for zip_mapped in zip_mapped_folder:
             logger.info("zipping " + zip_mapped)
-            zip.write(zip_mapped, os.path.basename(zip_mapped))
+            zip.write(zip_mapped, line_details["project_code"] + '_' + line_details["year"] + jday + "/" + os.path.basename(zip_mapped))
          #must close the file or it won't have final bits
          zip.close()
       #this *shouldn't* trigger until the zip file finishes

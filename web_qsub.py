@@ -84,7 +84,7 @@ def web_qsub(config, local=False, local_threaded=False, output=None):
    :param output:
    :return:
    """
-   config_file = ConfigParser.RawConfigParser()
+   config_file = ConfigParser.SafeConfigParser()
    config_file.read(config)
    lines = config_file.sections()
    defaults = config_file.defaults()

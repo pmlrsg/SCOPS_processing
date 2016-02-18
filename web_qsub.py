@@ -26,20 +26,7 @@ import logging
 import subprocess
 import sys
 import web_process_apl_line
-
-WEB_OUTPUT = "/users/rsg/arsf/web_processing/processing/"
-WEB_MASK_OUTPUT = "/level1b/"
-WEB_IGM_OUTPUT = "/igm/"
-WEB_MAPPED_OUTPUT = "/mapped/"
-WEB_DEM_FOLDER = "/dem/"
-VIEW_VECTOR_FILE = "/sensor_FOV_vectors/{}_view_vector_list.txt"
-OSNG_SEPERATION_FILE = "/users/rsg/arsf/dems/ostn02/OSTN02_NTv2.gsb"
-WEB_STATUS_OUTPUT = "/status"
-STATUS_FILE = "{}/status/{}_status.txt"
-LOG_FILE = "{}/logs/{}_log.txt"
-INITIAL_STATUS = "initialising"
-LOG_DIR = "/logs/"
-QUEUE = "lowpriority.q"
+import web_common
 
 def web_structure(project_code, jday, year, sortie=None, output_name=None):
    """
@@ -57,24 +44,24 @@ def web_structure(project_code, jday, year, sortie=None, output_name=None):
       folder_base = output_name
    else:
       if sortie is not "None":
-         folder_base = WEB_OUTPUT + project_code + '_' + year + '_' + jday + sortie + datetime.datetime.now().strftime(
+         folder_base = web_common.WEB_OUTPUT + project_code + '_' + year + '_' + jday + sortie + datetime.datetime.now().strftime(
             '%Y%m%d%H%M%S')
       else:
-         folder_base = WEB_OUTPUT + project_code + '_' + year + '_' + jday + datetime.datetime.now().strftime(
+         folder_base = web_common.WEB_OUTPUT + project_code + '_' + year + '_' + jday + datetime.datetime.now().strftime(
             '%Y%m%d%H%M%S')
    #make the folders
    os.mkdir(folder_base)
-   os.mkdir(folder_base + WEB_MASK_OUTPUT)
-   os.mkdir(folder_base + WEB_IGM_OUTPUT)
-   os.mkdir(folder_base + WEB_MAPPED_OUTPUT)
-   os.mkdir(folder_base + WEB_DEM_FOLDER)
-   os.mkdir(folder_base + WEB_STATUS_OUTPUT)
-   os.mkdir(folder_base + LOG_DIR)
+   os.mkdir(folder_base + web_common.WEB_MASK_OUTPUT)
+   os.mkdir(folder_base + web_common.WEB_IGM_OUTPUT)
+   os.mkdir(folder_base + web_common.WEB_MAPPED_OUTPUT)
+   os.mkdir(folder_base + web_common.WEB_DEM_FOLDER)
+   os.mkdir(folder_base + web_common.WEB_STATUS_OUTPUT)
+   os.mkdir(folder_base + web_common.LOG_DIR)
    #return the location
    return folder_base
 
 
-def web_qsub(config, local=False, local_threaded=False, output=None):
+def web_qsub(config, local=False, output=None):
    """
    Submits the job (or processes locally in its current form)
 
@@ -135,7 +122,7 @@ def web_qsub(config, local=False, local_threaded=False, output=None):
    except Exception as e:
       common_functions.ERROR(e)
       logging.error(e)
-      dem_name = (output_location + WEB_DEM_FOLDER + defaults["project_code"] + '_' + defaults["year"] + '_' + defaults[
+      dem_name = (output_location + web_common.WEB_DEM_FOLDER + defaults["project_code"] + '_' + defaults["year"] + '_' + defaults[
          "julianday"] + '_' + defaults["projection"] + ".dem").replace(' ', '_')
       arsf_dem.dem_nav_utilities.create_apl_dem_from_mosaic(dem_name,
                                                    dem_source=defaults["dem"],
@@ -143,13 +130,13 @@ def web_qsub(config, local=False, local_threaded=False, output=None):
    #update config with the dem name then submit the file to the processor, we don't want the script to run twice so set
    # submitted to true
    config_file.set('DEFAULT', "dem_name", dem_name)
-   config_file.set('DEFAULT', "submitted", True)
+   config_file.set('DEFAULT', "submitted", "True")
    config_file.write(open(config, 'w'))
 
    #Generate a status file for each line to be processed, these are important later!
    for line in lines:
-      status_file = STATUS_FILE.format(output_location, line)
-      log_file = LOG_FILE.format(output_location, line)
+      status_file = web_common.STATUS_FILE.format(output_location, line)
+      log_file = web_common.LOG_FILE.format(output_location, line)
       if "true" in dict(config_file.items(line))["process"]:
          open(status_file, 'w+').write("{} = {}".format(line, "waiting"))
          open(log_file, mode="a").close()
@@ -162,8 +149,8 @@ def web_qsub(config, local=False, local_threaded=False, output=None):
             print equation
             if config_file.has_option(line, equation):
                if config_file.get(line, equation) in "True":
-                  bm_status_file = STATUS_FILE.format(output_location, line + equation.replace("eq_", "_"))
-                  bm_log_file =  LOG_FILE.format(output_location, line + equation.replace("eq_", "_"))
+                  bm_status_file = web_common.STATUS_FILE.format(output_location, line + equation.replace("eq_", "_"))
+                  bm_log_file =  web_common.LOG_FILE.format(output_location, line + equation.replace("eq_", "_"))
                   open(bm_status_file, 'w+').write("{} = {}".format((line + equation.replace("eq_", "_")), "waiting"))
                   open(bm_log_file, mode="a").close()
 
@@ -182,24 +169,21 @@ def web_qsub(config, local=False, local_threaded=False, output=None):
 
       if main_line or band_ratio:
          if local:
-            if local_threaded:
-               # do threaded processing TODO
-               raise Exception("This still needs to be coded")
-               pass
-            else:
-               try:
-                  web_process_apl_line.line_handler(config, line, output_location, main_line, band_ratio)
-               except Exception as e:
-                  logging.error("Could not process job for {}, Reason: {}".format(line, e))
-                  continue
+            try:
+               web_process_apl_line.line_handler(config, line, output_location, main_line, band_ratio)
+            except Exception as e:
+               logging.error("Could not process job for {}, Reason: {}".format(line, e))
+               continue
          else:
+            #this will need to be updated to whatever parallel jobs system is
+            #being used in the intended use environemnt
             qsub_args = ["qsub"]
             qsub_args.extend(["-N", "WEB_" + defaults["project_code"] + "_" + line])
-            qsub_args.extend(["-q", QUEUE])
+            qsub_args.extend(["-q", web_common.QUEUE])
             qsub_args.extend(["-P", "arsfdan"])
             qsub_args.extend(["-wd", os.getcwd()])
-            qsub_args.extend(["-e", LOG_DIR])
-            qsub_args.extend(["-o", LOG_DIR])
+            qsub_args.extend(["-e", web_common.LOG_DIR])
+            qsub_args.extend(["-o", web_common.LOG_DIR])
             qsub_args.extend(["-m", "n"]) # Don't send mail
             qsub_args.extend(["-p", "-100"])
             qsub_args.extend(["-b", "y"])
@@ -227,11 +211,6 @@ if __name__ == '__main__':
                        help='local processing vs grid',
                        action='store_true',
                        default=False)
-   parser.add_argument('--threaded',
-                       '-t',
-                       help='multithreaded local processing',
-                       default=False,
-                       metavar="<sensor>")
    parser.add_argument('--output',
                        '-o',
                        help='Force output path and name',
@@ -239,4 +218,4 @@ if __name__ == '__main__':
                        metavar="<folder_name>")
    args = parser.parse_args()
 
-   web_qsub(args.config, local=args.local, local_threaded=args.threaded, output=args.output)
+   web_qsub(args.config, local=args.local, output=args.output)

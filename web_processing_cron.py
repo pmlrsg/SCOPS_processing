@@ -16,17 +16,18 @@ sys.path.insert(0, '/users/rsg/arsf/usr/lib_python_links')
 import common_functions
 import ConfigParser
 import os
-
-WEB_CONFIG_DIR = "/users/rsg/arsf/web_processing/configs/"
-QSUB_COMMAND = "/users/rsg/stgo/PycharmProjects/ARSF_web_processor/web_qsub.py"
-
-
+import web_common
 
 def main():
-   for configfile in os.listdir(WEB_CONFIG_DIR):
+   """
+   This iterates over all the config files available and updates so they won't
+   double submit or overlap. It should be updated to throttle it'self if a lot
+   of jobs are already on the grid/being processed locally
+   """
+   for configfile in os.listdir(web_common.WEB_CONFIG_DIR):
       submit = True
       config = ConfigParser.SafeConfigParser()
-      config.read(WEB_CONFIG_DIR + "/" + configfile)
+      config.read(web_common.WEB_CONFIG_DIR + "/" + configfile)
 
       if config.get("DEFAULT", "submitted") in "True":
          submit = False
@@ -40,7 +41,7 @@ def main():
 
       if submit:
          # using local until happy that all processing works
-         common_functions.CallSubprocessOn([QSUB_COMMAND, "-c", WEB_CONFIG_DIR + "/" + configfile, "--local"])
+         common_functions.CallSubprocessOn([web_common.QSUB_COMMAND, "-c", web_common.WEB_CONFIG_DIR + "/" + configfile, "--local"])
 
 if __name__ == '__main__':
    main()

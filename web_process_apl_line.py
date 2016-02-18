@@ -29,23 +29,8 @@ import logging
 import re
 import bandmath
 import common_arsf
+import web_common
 from common_arsf.web_functions import send_email
-
-WEB_MASK_OUTPUT = "/level1b/"
-WEB_IGM_OUTPUT = "/igm/"
-WEB_MAPPED_OUTPUT = "/mapped/"
-VIEW_VECTOR_FILE = "/sensor_FOV_vectors/{}_fov_fullccd_vectors.bil"
-OSNG_SEPERATION_FILE = "/users/rsg/arsf/dems/ostn02/OSTN02_NTv2.gsb"
-STATUS_DIR = "/status/"
-ERROR_DIR = "/status/"
-LOG_DIR = "/logs/"
-STATUS_FILE = "{}/status/{}_status.txt"
-INITIAL_STATUS = "initialising"
-NAVIGATION_FOLDER = "/flightlines/navigation/"
-SEND_EMAIL = "arsf-processing@pml.ac.uk"
-ERROR_EMAIL = "stgo@pml.ac.uk" #TODO change from stgo!
-DOWNLOAD_LINK = 'https://arsf-dandev.nerc.ac.uk/processor/downloads/{}?&project={}'
-STATUS_LINK = 'https://arsf-dandev.nerc.ac.uk/processor/status/{}?&project={}'
 
 def email_error(stage, line, error, processing_folder):
    """
@@ -62,7 +47,7 @@ def email_error(stage, line, error, processing_folder):
              "Once the issue has been resolved update the relevant status file to state either 'complete' or 'waiting to zip' (dependant on what you've done)"
 
    message = message.format(line, stage, error, processing_folder)
-   common_arsf.web_functions.send_email(message, ERROR_EMAIL, processing_folder + " ERROR", SEND_EMAIL)
+   common_arsf.web_functions.send_email(message, web_common.ERROR_EMAIL, processing_folder + " ERROR", web_common.SEND_EMAIL)
 
 
 def email_PI(pi_email, output_location, project):
@@ -75,7 +60,7 @@ def email_PI(pi_email, output_location, project):
    :return:
    """
    folder_name = os.path.basename(os.path.normpath(output_location))
-   download_link = DOWNLOAD_LINK.format(folder_name, project)
+   download_link = web_common.DOWNLOAD_LINK.format(folder_name, project)
 
    message = 'Processing is complete for your order request {}, you can now download the data from the following location:\n\n' \
              '{}\n\n' \
@@ -84,11 +69,20 @@ def email_PI(pi_email, output_location, project):
              'ARSF'
 
    message = message.format(folder_name, download_link)
-   common_arsf.web_functions.send_email(message, pi_email, folder_name + " order complete", SEND_EMAIL)
+   common_arsf.web_functions.send_email(message, pi_email, folder_name + " order complete", web_common.SEND_EMAIL)
 
 def email_status(pi_email, output_location, project):
+   """
+   Sends an email to update the user that their data has begun processing. This
+   includes a link to the status page where they can watch progress bars and
+   download files on completion.
+
+   :param pi_email:
+   :param output_location:
+   :param project:
+   """
    output_location = os.path.basename(os.path.normpath(output_location))
-   status_link = STATUS_LINK.format(output_location, project)
+   status_link = web_common.STATUS_LINK.format(output_location, project)
    message = "This is to notify you that your ARSF data order has begun processing. You can track its progress at the following URL:\n\n" \
              "{}\n\n" \
              "You will receive a final email once all data has completed processing\n"\
@@ -96,7 +90,7 @@ def email_status(pi_email, output_location, project):
              "ARSF"
 
    message=message.format(status_link)
-   common_arsf.web_functions.send_email(message, pi_email, output_location + " order processing", SEND_EMAIL)
+   common_arsf.web_functions.send_email(message, pi_email, output_location + " order processing", web_common.SEND_EMAIL)
 
 
 def status_update(status_file, newstage, line):
@@ -110,6 +104,18 @@ def status_update(status_file, newstage, line):
    open(status_file, 'w').write("{} = {}".format(line, newstage))
 
 def line_handler(config_file, line_name, output_location, process_main_line, process_band_ratio):
+   """
+   The main handler function. This grabs all lines that need to be processed,
+   performs band math if requested then dispatches a series of APL requests to
+   mask, translate and map the data. Finally it will zip all files together to
+   make downloading easier.
+
+   :param config_file:
+   :param line_name:
+   :param output_location:
+   :param process_main_line:
+   :param process_band_ratio:
+   """
    #read the config
    config = ConfigParser.SafeConfigParser()
    config.read(config_file)
@@ -189,7 +195,7 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
    #set up logging
    logger = logging.getLogger()
    output_line_name = output_line_name.replace(".","").replace("bil", "").replace("1b","")
-   file_handler = logging.FileHandler(output_location + LOG_DIR + output_line_name.replace("1b.bil","") + "_log.txt", mode='a')
+   file_handler = logging.FileHandler(output_location + web_common.LOG_DIR + output_line_name.replace("1b.bil","") + "_log.txt", mode='a')
    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
    file_handler.setFormatter(formatter)
    logger.handlers = []
@@ -199,10 +205,10 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
    #get the line section we want
    line_details = dict(config.items(base_line_name))
    line_number = str(base_line_name[-2:])
-   status_file = STATUS_FILE.format(output_location, output_line_name.replace("1b.bil", ""))
+   status_file = web_common.STATUS_FILE.format(output_location, output_line_name.replace("1b.bil", ""))
 
    #set our first status
-   open(status_file, 'w+').write("{} = {}".format(output_line_name, INITIAL_STATUS))
+   open(status_file, 'w+').write("{} = {}".format(output_line_name,  web_common.INITIAL_STATUS))
 
    jday = "{0:03d}".format(int(line_details["julianday"]))
 
@@ -240,7 +246,7 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
    status_update(status_file, "aplmask", output_line_name)
 
    #create output file name
-   masked_file = output_location + WEB_MASK_OUTPUT + output_line_name.replace(".bil","") + "_masked.bil"
+   masked_file = output_location + web_common.WEB_MASK_OUTPUT + output_line_name.replace(".bil","") + "_masked.bil"
 
    if not "masking" in skip_stages:
       #generate masking command
@@ -262,15 +268,15 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
    status_update(status_file, "aplcorr", output_line_name)
 
    #create filenames
-   igm_file = output_location + WEB_IGM_OUTPUT + base_line_name + ".igm"
-   nav_file = glob.glob(hyper_delivery + NAVIGATION_FOLDER + base_line_name + "*_nav_post_processed.bil")[0]
+   igm_file = output_location + web_common.WEB_IGM_OUTPUT + base_line_name + ".igm"
+   nav_file = glob.glob(hyper_delivery + web_common.NAVIGATION_FOLDER + base_line_name + "*_nav_post_processed.bil")[0]
 
    #aplcorr command
    if not os.path.exists(igm_file):
       aplcorr_cmd = ["aplcorr"]
       aplcorr_cmd.extend(["-lev1file", lev1file])
       aplcorr_cmd.extend(["-navfile", nav_file])
-      aplcorr_cmd.extend(["-vvfile", hyper_delivery + VIEW_VECTOR_FILE.format(sensor)])
+      aplcorr_cmd.extend(["-vvfile", hyper_delivery + web_common.VIEW_VECTOR_FILE.format(sensor)])
       aplcorr_cmd.extend(["-dem", dem])
       aplcorr_cmd.extend(["-igmfile", igm_file])
 
@@ -287,7 +293,7 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
    igm_file_transformed = igm_file.replace(".igm", "_{}.igm").format(projection.replace(' ', '_'))
 
    if projection in "osng":
-      projection = projection + " " + OSNG_SEPERATION_FILE
+      projection = projection + " " + web_common.OSNG_SEPERATION_FILE
 
    status_update(status_file, "apltran", output_line_name)
 
@@ -299,7 +305,7 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
    if "utm" in projection:
       apltran_cmd.extend(["-outproj", "utm_wgs84{}".format(hemisphere), zone])
    elif "osng" in projection:
-      apltran_cmd.extend(["-outproj", "osng", OSNG_SEPERATION_FILE])
+      apltran_cmd.extend(["-outproj", "osng", web_common.OSNG_SEPERATION_FILE])
 
    try:
       common_functions.CallSubprocessOn(apltran_cmd, redirect=False, logger=logger)
@@ -316,7 +322,7 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
    #set pixel size and map name
    pixelx, pixely = line_details["pixelsize"].split(" ")
 
-   mapname = output_location + WEB_MAPPED_OUTPUT +output_line_name + "3b_mapped.bil"
+   mapname = output_location + web_common.WEB_MAPPED_OUTPUT +output_line_name + "3b_mapped.bil"
 
    aplmap_cmd = ["aplmap"]
    aplmap_cmd.extend(["-igm", igm_file_transformed])
@@ -342,8 +348,8 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
 
    while waiting:
       stillwaiting = False
-      for file in os.listdir(output_location + STATUS_DIR):
-         f = open(output_location + STATUS_DIR + file, 'r')
+      for file in os.listdir(output_location + web_common.STATUS_DIR):
+         f = open(output_location + web_common.STATUS_DIR + file, 'r')
          for line in f:
             if "zipping" in line:
                stillwaiting = True
@@ -365,21 +371,21 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
 
    #if all the files are complete its time to zip them together
    all_check = True
-   for status in os.listdir(output_location + STATUS_DIR):
-      for l in open(output_location + STATUS_DIR + status):
+   for status in os.listdir(output_location + web_common.STATUS_DIR):
+      for l in open(output_location + web_common.STATUS_DIR + status):
          if "complete" not in l:
             if "not processing" not in l:
                all_check = False
 
    if all_check:
       #if all are finished we'll use this process to zip all the zipped mapped files into one for download
-      zip_mapped_folder = glob.glob(output_location + WEB_MAPPED_OUTPUT + "*.bil.zip")
-      zip_contents_file = open(output_location + WEB_MAPPED_OUTPUT + "zip_contents.txt", 'a')
+      zip_mapped_folder = glob.glob(output_location + web_common.WEB_MAPPED_OUTPUT + "*.bil.zip")
+      zip_contents_file = open(output_location + web_common.WEB_MAPPED_OUTPUT + "zip_contents.txt", 'a')
       for zip_mapped in zip_mapped_folder:
          zip_contents_file.write(zip_mapped + "\n")
       zip_contents_file.close()
       logger.info("outputting master zip")
-      with zipfile.ZipFile(output_location + WEB_MAPPED_OUTPUT + line_details["project_code"] + '_' + line_details[
+      with zipfile.ZipFile(output_location + web_common.WEB_MAPPED_OUTPUT + line_details["project_code"] + '_' + line_details[
          "year"] + jday + '.zip', 'a', zipfile.ZIP_DEFLATED, allowZip64=True) as zip:
          for zip_mapped in zip_mapped_folder:
             logger.info("zipping " + zip_mapped)

@@ -1,9 +1,13 @@
 #! /usr/bin/env python
+from __future__ import print_function
+
 import gdal
 import numpy
 import numexpr
 import scipy
 import os
+import argparse
+import re
 
 def bandmath(bilfile, equation, outputfolder, bands, eqname=None, maskfile=None):
    """
@@ -15,24 +19,21 @@ def bandmath(bilfile, equation, outputfolder, bands, eqname=None, maskfile=None)
    throw an exception
    """
    bil = gdal.Open(bilfile)
-   maskbil = gdal.Open(maskfile)
    banddict = {}
    for band in bands:
       banddict["band{}".format(band)] = bil.GetRasterBand(int(band)).ReadAsArray()
    result = numexpr.evaluate(equation,
                              local_dict=banddict)
-   print "test"
    if eqname is None:
       equation_clean = equation.replace("*", "x").replace("/", '').replace(" ", "_")
    else:
       equation_clean = eqname
-   print numpy.shape(result)
    try:
       layers, rows, cols = numpy.shape(result)
    except:
       rows, cols = numpy.shape(result)
       layers = 1
-   print rows, cols
+
    output_name = outputfolder + "/" + os.path.basename(bilfile).replace(".bil", "") + equation_clean + ".bil"
    destination = gdal.GetDriverByName('ENVI').Create(output_name,
                                                    cols,
@@ -43,15 +44,13 @@ def bandmath(bilfile, equation, outputfolder, bands, eqname=None, maskfile=None)
    outband.WriteArray(result)
    destination = None
 
-   print "test"
-   if not maskfile is None:
+   if maskfile is not None:
+      maskbil = gdal.Open(maskfile)
       if layers == 1:
          #if it's one we need to combine it down
          maskarrays=[]
          basemask=numpy.zeros((rows, cols), dtype=float)
-         print "test2"
          for band in bands:
-            print "test"
             numpy.add(maskbil.GetRasterBand(int(band)).ReadAsArray(), basemask)
       if layers > 1:
          maskarray = maskbil.ReadAsArray()
@@ -72,9 +71,39 @@ def bandmath(bilfile, equation, outputfolder, bands, eqname=None, maskfile=None)
 
    return output_name, layers
 
+if __name__ == '__main__':
+   parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+   parser.add_argument('--equation',
+                       '-e',
+                       help='string equation presented in quotes, e.g. "(band001 / band002)"',
+                       default=None,
+                       metavar="<equation>")
+   parser.add_argument('--output_folder',
+                       '-o',
+                       help='output folder',
+                       default=None,
+                       metavar="<output_folder>")
+   parser.add_argument('--maskfile',
+                       '-m',
+                       help='mask file',
+                       default=None,
+                       metavar="maskfile")
+   parser.add_argument('--ename',
+                       '-n',
+                       help='equation name to append to file, defaults to input equation',
+                       default=None,
+                       metavar="ename")
+   parser.add_argument('bilfile',
+                       help='bil file to run on',
+                       default=None,
+                       metavar="bilfile")
+   args = parser.parse_args()
 
-def main():
-   return "test2"
+   bands = re.findall(r'band(\d{3})', args.equation)
 
-if __name__ == main:
-   main()
+   if args.output_folder is None:
+      output = os.getcwd()
+   else:
+      output = args.output_folder
+   print("Will perform {} on bands {}".format(args.equation, ", ".join(bands)))
+   bandmath(args.bilfile, args.equation, output, bands, eqname=args.ename, maskfile=args.maskfile)

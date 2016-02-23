@@ -1,4 +1,14 @@
 #! /usr/bin/env python
+"""
+Performs array mathematics on compatible gdal files, can't be used on seperate
+files unless it is extended to subset seperate datasets.
+
+Author: Stephen Goult
+
+Available functions
+bandmath: runs a given equation on a gdal compatible file and optionally
+generates a maskfile to be used in apl
+"""
 from __future__ import print_function
 
 import gdal

@@ -31,7 +31,8 @@ def bandmath(bilfile, equation, outputfolder, bands, eqname=None, maskfile=None)
    bil = gdal.Open(bilfile)
    banddict = {}
    for band in bands:
-      banddict["band{}".format(band)] = bil.GetRasterBand(int(band)).ReadAsArray()
+      banddict["band{}".format(band)] = \
+                bil.GetRasterBand(int(band)).ReadAsArray().astype(numpy.float32)
    result = numexpr.evaluate(equation,
                              local_dict=banddict)
    if eqname is None:
@@ -44,12 +45,15 @@ def bandmath(bilfile, equation, outputfolder, bands, eqname=None, maskfile=None)
       rows, cols = numpy.shape(result)
       layers = 1
 
-   output_name = outputfolder + "/" + os.path.basename(bilfile).replace(".bil", "") + equation_clean + ".bil"
+   output_name = os.path.join(outputfolder,
+                              os.path.basename(bilfile).replace(".bil", "") +
+                              "_{}.bil".format(equation_clean))
    destination = gdal.GetDriverByName('ENVI').Create(output_name,
                                                    cols,
                                                    rows,
                                                    1,
-                                                   gdal.GDT_Float32)
+                                                   gdal.GDT_Float32,
+                                                   ["INTERLEAVE=BIL"])
    outband = destination.GetRasterBand(1)
    outband.WriteArray(result)
    destination = None
@@ -68,7 +72,8 @@ def bandmath(bilfile, equation, outputfolder, bands, eqname=None, maskfile=None)
                                                 cols,
                                                 rows,
                                                 layers,
-                                                gdal.GDT_Byte)
+                                                gdal.GDT_Byte,
+                                                ["INTERLEAVE=BIL"])
       for i in range(layers):
          outband = destination.GetRasterBand(i+1)
          if layers == 1:
@@ -116,4 +121,7 @@ if __name__ == '__main__':
    else:
       output = args.output_folder
    print("Will perform {} on bands {}".format(args.equation, ", ".join(bands)))
-   bandmath(args.bilfile, args.equation, output, bands, eqname=args.ename, maskfile=args.maskfile)
+   output_name, layers = bandmath(args.bilfile, args.equation, output,
+                                  bands, eqname=args.ename,
+                                  maskfile=args.maskfile)
+   print("Wrote to: {}".format(output_name))

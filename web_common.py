@@ -9,6 +9,8 @@ best settings but for the moment will just act as a lazy config file until I hav
 time to update it
 """
 
+PROCESS_COMMAND = "users/rsg/stgo/PycharmProjects/ARSF_web_processor/web_process_apl_line.py"
+
 WEB_MASK_OUTPUT = "/level1b/"
 
 WEB_IGM_OUTPUT = "/igm/"

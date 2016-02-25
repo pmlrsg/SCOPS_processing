@@ -143,10 +143,8 @@ def web_qsub(config, local=False, output=None):
       else:
          open(status_file, 'w+').write("{} = {}".format(line, "not processing"))
       equations = [x for x in dict(config_file.items('DEFAULT')) if "eq_" in x]
-      print equations
       if len(equations) > 0:
          for equation in equations:
-            print equation
             if config_file.has_option(line, equation):
                if config_file.get(line, equation) in "True":
                   bm_status_file = web_common.STATUS_FILE.format(output_location, line + equation.replace("eq_", "_"))
@@ -187,6 +185,17 @@ def web_qsub(config, local=False, output=None):
             qsub_args.extend(["-m", "n"]) # Don't send mail
             qsub_args.extend(["-p", "-100"])
             qsub_args.extend(["-b", "y"])
+            script_args = [web_common.PROCESS_COMMAND]
+            script_args.extend(["-l", line])
+            script_args.extend(["-c", config])
+            script_args.extend(["-s","fenix"])
+            script_args.extend(["-o", output_location])
+            if main_line:
+               script_args.extend(["-m"])
+            if band_ratio:
+               script_args.extend(["-b"])
+
+            qsub_args.extend(script_args)
             try:
                 qsub = subprocess.Popen(qsub_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             except:

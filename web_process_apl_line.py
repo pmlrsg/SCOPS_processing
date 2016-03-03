@@ -171,7 +171,7 @@ def line_handler(config_file, line_name, output_location, process_main_line, pro
             equation = config.get('DEFAULT', eq_name)
             band_numbers = re.findall(r'band(\d{3})', equation)
             output_location_updated = output_location + "/level1b"
-            bm_file, bands = bandmath.bandmath(lev1file, equation, output_location_updated, band_numbers, eqname=eq_name.replace("eq_", "_"), maskfile=maskfile)
+            bm_file, bands = bandmath.bandmath(lev1file, equation, output_location_updated, band_numbers, eqname=eq_name.replace("eq_", ""), maskfile=maskfile)
             if bands > 1:
                band_list = config.get(line_name, 'band_range')
             else:

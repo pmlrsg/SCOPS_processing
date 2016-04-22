@@ -1,4 +1,10 @@
 #! /usr/bin/env python
+###########################################################
+# This file has been created by ARSF Data Analysis Node and
+# is licensed under the GPL v3 Licence. A copy of this
+# licence is available to download with this file.
+###########################################################
+
 """
 Main processor script for the arsf web processor, will normally be invoked by
 web qsub but can also be used at the command line. This will take a level1b file
@@ -10,7 +16,7 @@ will work properly.
 Author: Stephen Goult
 
 Available functions
-email_error: will send an email to arsf-code on failure of processing
+email_error: will send an email to the set address on failure of processing
 email_PI: will email the PI on completion of processing and zipping with a download_link
 status_update: updates status file with current stage
 process_web_hyper_line: main function, take a config, line name and output folder to run apl in and zip finished files.
@@ -19,22 +25,57 @@ process_web_hyper_line: main function, take a config, line name and output folde
 import argparse
 import os
 import ConfigParser
-import common_functions
 import folder_structure
 import glob
 import zipfile
 import pipes
-import smtplib
 import logging
 import re
 import bandmath
-import common_arsf
 import web_common
+import common_functions
+
+from arsf_dem import dem_common_functions
 from common_arsf.web_functions import send_email
+
+def masklookup(mask_string):
+   """
+   Compares a string of letters to a dict of mask options, outputs a string of
+   mask numerics and CCD letters to input to aplmask
+   :param mask_string: string
+   :return: mask_list
+   :rtype: list
+   :return: ccd_list
+   :rtype: list
+   """
+   mask_list = []
+   ccd_list = []
+   mask_dict = {
+      "a": "A",
+      "b": "B",
+      "c": "C",
+      "d": "D",
+      "e": "E",
+      "f": "F",
+      "u": "1",
+      "o": "2",
+      "m": "8",
+      "n": "16",
+      "r": "32",
+      "q": "64",
+   }
+   for char in mask_string:
+      if char in "abcdef":
+         if "4" not in mask_list:
+            mask_list.append("4")
+         ccd_list.append(mask_dict[char])
+      else:
+         mask_list.append(mask_dict[char])
+   return mask_list, ccd_list
 
 def email_error(stage, line, error, processing_folder):
    """
-   Send an email to arsf-code telling us what went wrong
+   Send an email to the set email telling us what went wrong
    :param stage:
    :param line:
    :param error:
@@ -64,7 +105,7 @@ def email_PI(pi_email, output_location, project):
 
    message = 'Processing is complete for your order request {}, you can now download the data from the following location:\n\n' \
              '{}\n\n' \
-             'The data will be available for a total of two weeks, however this may be extended if requested. If you identify any problems with your data or have issues downloading the data please contact ARSF staff at arsf-processing@pml.ac.uk.\n\n' \
+             'The data will be available for a total of two weeks, however this may be extended if requested. If you identify any problems with your data or have issues downloading the data please contact ARSF-DAN staff at arsf-processing@pml.ac.uk.\n\n' \
              'Regards,\n' \
              'ARSF'
 
@@ -90,7 +131,7 @@ def email_status(pi_email, output_location, project):
              "ARSF"
 
    message=message.format(status_link)
-   common_arsf.web_functions.send_email(message, pi_email, output_location + " order processing", web_common.SEND_EMAIL)
+   send_email(message, pi_email, output_location + " order processing", "arsf-processing@pml.ac.uk")
 
 
 def status_update(status_file, newstage, line):
@@ -102,6 +143,7 @@ def status_update(status_file, newstage, line):
    :return:
    """
    open(status_file, 'w').write("{} = {}".format(line, newstage))
+
 
 def line_handler(config_file, line_name, output_location, process_main_line, process_band_ratio):
    """
@@ -132,33 +174,20 @@ def line_handler(config_file, line_name, output_location, process_main_line, pro
       sensor = "hawk"
    elif line_name[:1] in "e":
       sensor = "eagle"
+   elif line_name[:1] in "o":
+      sensor = "owl"
+      raise NotImplementedError("owl not yet compatible")
+   else:
+      raise Exception("no compatible sensors found, check the input files naming convention beings with f, e, o or h.")
 
    sortie = line_details["sortie"]
    if sortie == "None":
       sortie = ''
-   folder = folder_structure.FolderStructure(year=line_details["year"],
-                                             jday=jday,
-                                             projectCode=line_details["project_code"],
-                                             fletter=sortie,
-                                             lineId=line_number,
-                                             lineNumber=line_number,
-                                             sct=1,
-                                             sensor=sensor)
+   folder = line_details['sourcefolder']
+   hyper_delivery = glob.glob(folder + "/delivery/*hyperspectral*/")[0]
 
-   hyper_delivery = glob.glob(folder.projPath + "/delivery/*hyperspectral*/")[0]
-
-   folder = folder_structure.FolderStructure(year=line_details["year"],
-                                             jday=jday,
-                                             projectCode=line_details["project_code"],
-                                             fletter=sortie,
-                                             lineId=line_number,
-                                             lineNumber=line_number,
-                                             sct=1,
-                                             delPath=hyper_delivery,
-                                             sensor=sensor,
-                                             absolute=True)
-
-   lev1file = folder.getLev1File(delivery=True)
+   #wildcard in the middle to make sure line number doesn't muck things up
+   lev1file=glob.glob(hyper_delivery + '/' + web_common.LEV1_FOLDER + '/' + '*' +jday+ '*' + line_number +'1b.bil')[0]
    maskfile = lev1file.replace(".bil", "_mask.bil")
    band_list = config.get(line_name, 'band_range')
    if process_main_line:
@@ -249,21 +278,31 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
    masked_file = output_location + web_common.WEB_MASK_OUTPUT + output_line_name.replace(".bil","") + "_masked.bil"
 
    if not "masking" in skip_stages:
-      #generate masking command
-      aplmask_cmd = ["aplmask"]
-      aplmask_cmd.extend(["-lev1", input_lev1_file])
-      aplmask_cmd.extend(["-mask", maskfile])
-      aplmask_cmd.extend(["-output", masked_file])
+      if not 'none' in line_details['masking']:
+         #generate masking command
+         aplmask_cmd = ["aplmask"]
+         aplmask_cmd.extend(["-lev1", input_lev1_file])
+         if not 'all' in line_details['masking']:
+            mask_list, ccd_list = masklookup(line_details['masking'])
+            aplmask_cmd.extend(["-flags"])
+            aplmask_cmd.extend(mask_list)
+            print ccd_list
+            print ["-onlymaskmethods", maskfile.replace('mask.bil', 'mask-badpixelmethod.bil')]
+            if len(ccd_list) > 0:
+               aplmask_cmd.extend(["-onlymaskmethods", maskfile.replace('mask.bil', 'mask-badpixelmethod.bil')])
+               aplmask_cmd.extend(ccd_list)
+         aplmask_cmd.extend(["-mask", maskfile])
+         aplmask_cmd.extend(["-output", masked_file])
 
-      #try running the command and except on failure
-      try:
-          common_functions.CallSubprocessOn(aplmask_cmd, redirect=False, logger=logger)
-          if not os.path.exists(masked_file):
-              raise Exception, "masked file not output"
-      except Exception as e:
-          status_update(status_file, "ERROR - aplmask", output_line_name)
-          logger.error([e, output_line_name])
-          exit(1)
+         #try running the command and except on failure
+         try:
+             common_functions.CallSubprocessOn(aplmask_cmd, redirect=False, logger=logger)
+             if not os.path.exists(masked_file):
+                 raise Exception("masked file not output")
+         except Exception as e:
+             status_update(status_file, "ERROR - aplmask", output_line_name)
+             logger.error([e, output_line_name])
+             exit(1)
 
    status_update(status_file, "aplcorr", output_line_name)
 
@@ -283,7 +322,7 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
       try:
           common_functions.CallSubprocessOn(aplcorr_cmd, redirect=False, logger=logger)
           if not os.path.exists(igm_file):
-              raise Exception, "igm file not output by aplcorr!"
+              raise Exception("igm file not output by aplcorr!")
       except Exception as e:
           status_update(status_file, "ERROR - aplcorr", output_line_name)
           logger.error([e, output_line_name])
@@ -310,7 +349,7 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
    try:
       common_functions.CallSubprocessOn(apltran_cmd, redirect=False, logger=logger)
       if not os.path.exists(igm_file_transformed):
-         raise Exception, "igm file not output by apltran!"
+         raise Exception("igm file not output by apltran!")
    except Exception as e:
       status_update(status_file, "ERROR - apltran", output_line_name)
       logger.error([e,output_line_name])
@@ -331,11 +370,13 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
    aplmap_cmd.extend(["-bandlist", band_list])
    aplmap_cmd.extend(["-interpolation", line_details["interpolation"]])
    aplmap_cmd.extend(["-mapname", mapname])
+   aplmap_cmd.extend(["-buffersize", str(4096)])
+   aplmap_cmd.extend(["-outputlevel", "verbose"])
 
    try:
       log = common_functions.CallSubprocessOn(aplmap_cmd, redirect=False, logger=logger)
       if not os.path.exists(mapname):
-         raise Exception, "mapped file not output by aplmap!"
+         raise Exception("mapped file not output by aplmap!")
    except Exception as e:
       status_update(status_file, "ERROR - aplmap", output_line_name)
       logger.error([e,output_line_name])
@@ -403,11 +444,13 @@ if __name__ == '__main__':
                        '-c',
                        help='web config file',
                        default=None,
+                       required=True,
                        metavar="<configfile>")
    parser.add_argument('--line',
                        '-l',
                        help='line to process',
                        default=None,
+                       required=True,
                        metavar="<line>")
    parser.add_argument('--sensor',
                        '-s',

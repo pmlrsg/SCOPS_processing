@@ -1,4 +1,10 @@
 #! /usr/bin/env python
+###########################################################
+# This file has been created by ARSF Data Analysis Node and
+# is licensed under the GPL v3 Licence. A copy of this
+# licence is available to download with this file.
+###########################################################
+
 """
 qsub script to be called by web_processing_cron, receives config files from web process cron and generates a processing
 folder tree/dem before either submitting to the grid or processing locally.
@@ -15,10 +21,8 @@ the grid. Uses web_process_apl_line.py
 
 import os
 import folder_structure
-import common_functions
 import datetime
 import ConfigParser
-import web_process_apl_line
 import argparse
 import arsf_dem
 import glob
@@ -27,6 +31,8 @@ import subprocess
 import sys
 import web_process_apl_line
 import web_common
+
+from arsf_dem import dem_common_functions
 
 def web_structure(project_code, jday, year, sortie=None, output_name=None):
    """
@@ -50,13 +56,16 @@ def web_structure(project_code, jday, year, sortie=None, output_name=None):
          folder_base = web_common.WEB_OUTPUT + project_code + '_' + year + '_' + jday + datetime.datetime.now().strftime(
             '%Y%m%d%H%M%S')
    #make the folders
-   os.mkdir(folder_base)
-   os.mkdir(folder_base + web_common.WEB_MASK_OUTPUT)
-   os.mkdir(folder_base + web_common.WEB_IGM_OUTPUT)
-   os.mkdir(folder_base + web_common.WEB_MAPPED_OUTPUT)
-   os.mkdir(folder_base + web_common.WEB_DEM_FOLDER)
-   os.mkdir(folder_base + web_common.WEB_STATUS_OUTPUT)
-   os.mkdir(folder_base + web_common.LOG_DIR)
+   if os.access(web_common.WEB_OUTPUT, os.W_OK):
+      os.mkdir(folder_base)
+      os.mkdir(folder_base + web_common.WEB_MASK_OUTPUT)
+      os.mkdir(folder_base + web_common.WEB_IGM_OUTPUT)
+      os.mkdir(folder_base + web_common.WEB_MAPPED_OUTPUT)
+      os.mkdir(folder_base + web_common.WEB_DEM_FOLDER)
+      os.mkdir(folder_base + web_common.WEB_STATUS_OUTPUT)
+      os.mkdir(folder_base + web_common.LOG_DIR)
+   else:
+      raise IOError("no write permissions at {}".format(web_common.WEB_OUTPUT))
    #return the location
    return folder_base
 
@@ -95,9 +104,7 @@ def web_qsub(config, local=False, output=None):
       output_location = output
 
    #symlink the config file into the processing folder so that we know the source of any problems that arise
-   if os.path.exists(output_location + '/' + os.path.basename(config)):
-      pass
-   else:
+   if not os.path.exists(output_location + '/' + os.path.basename(config)):
       os.symlink(os.path.abspath(config), output_location + '/' + os.path.basename(config))
 
    sortie=defaults["sortie"]
@@ -120,7 +127,7 @@ def web_qsub(config, local=False, output=None):
       if not os.path.exists(dem_name):
          raise Exception("The DEM specified does not exist!")
    except Exception as e:
-      common_functions.ERROR(e)
+      dem_common_functions.ERROR(e)
       logging.error(e)
       dem_name = (output_location + web_common.WEB_DEM_FOLDER + defaults["project_code"] + '_' + defaults["year"] + '_' + defaults[
          "julianday"] + '_' + defaults["projection"] + ".dem").replace(' ', '_')
@@ -143,12 +150,16 @@ def web_qsub(config, local=False, output=None):
       else:
          open(status_file, 'w+').write("{} = {}".format(line, "not processing"))
       equations = [x for x in dict(config_file.items('DEFAULT')) if "eq_" in x]
+      #if equations exist we should do something with them
       if len(equations) > 0:
          for equation in equations:
             if config_file.has_option(line, equation):
                if config_file.get(line, equation) in "True":
+                  #build a load of band math status amd log files
                   bm_status_file = web_common.STATUS_FILE.format(output_location, line + equation.replace("eq_", "_"))
                   bm_log_file =  web_common.LOG_FILE.format(output_location, line + equation.replace("eq_", "_"))
+
+                  #open status and log files
                   open(bm_status_file, 'w+').write("{} = {}".format((line + equation.replace("eq_", "_")), "waiting"))
                   open(bm_log_file, mode="a").close()
 
@@ -160,9 +171,11 @@ def web_qsub(config, local=False, output=None):
       band_ratio = False
       main_line = False
       if dict(config_file.items(line))["process"] in "true":
+         #if they want the main line processed we should submit it
          main_line = True
 
       if len([x for x in dict(config_file.items(line)) if "eq_" in x]) > 0:
+         # if they want the band ratiod file we should submit it
          band_ratio = True
 
       if main_line or band_ratio:
@@ -197,10 +210,10 @@ def web_qsub(config, local=False, output=None):
 
             qsub_args.extend(script_args)
             try:
-                qsub = subprocess.Popen(qsub_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+               qsub = subprocess.Popen(qsub_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             except:
-                logging.error("Could not submit qsub job. Reason: " + str(sys.exc_info()[1]))
-                continue
+               logging.error("Could not submit qsub job. Reason: " + str(sys.exc_info()[1]))
+               continue
             logging.info("line submitted: " + line)
 
    logging.info("all lines complete")

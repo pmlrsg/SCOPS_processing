@@ -1,4 +1,10 @@
 #! /usr/bin/env python
+
+###########################################################
+# This file has been created by ARSF Data Analysis Node and
+# is licensed under the GPL v3 Licence. A copy of this
+# licence is available to download with this file.
+###########################################################
 """
 Performs array mathematics on compatible gdal files, can't be used on seperate
 files unless it is extended to subset seperate datasets.
@@ -14,7 +20,6 @@ from __future__ import print_function
 import gdal
 import numpy
 import numexpr
-import scipy
 import os
 import argparse
 import re
@@ -30,32 +35,44 @@ def bandmath(bilfile, equation, outputfolder, bands, eqname=None, maskfile=None)
    """
    bil = gdal.Open(bilfile)
    banddict = {}
+   #we need to build a dictionary of band variables to hand in to numexpr
    for band in bands:
       banddict["band{}".format(band)] = \
                 bil.GetRasterBand(int(band)).ReadAsArray().astype(numpy.float32)
+   #local dict becomes the variable list
    result = numexpr.evaluate(equation,
                              local_dict=banddict)
+   #need to come up with something sernsible to use as the name
    if eqname is None:
       equation_clean = equation.replace("*", "x").replace("/", '').replace(" ", "_")
    else:
       equation_clean = eqname
+   #see if there is more than one band output from numexp
    try:
       layers, rows, cols = numpy.shape(result)
    except:
+      #if not we only have one band to deal with
       rows, cols = numpy.shape(result)
       layers = 1
 
+   #build a clever output name
    output_name = os.path.join(outputfolder,
                               os.path.basename(bilfile).replace(".bil", "") +
                               "_{}.bil".format(equation_clean))
+   #need to have a destination dataset before gdal will let us write out
    destination = gdal.GetDriverByName('ENVI').Create(output_name,
                                                    cols,
                                                    rows,
                                                    1,
                                                    gdal.GDT_Float32,
                                                    ["INTERLEAVE=BIL"])
-   outband = destination.GetRasterBand(1)
-   outband.WriteArray(result)
+   for i in range(layers):
+      outband = destination.GetRasterBand(i+1)
+      if layers == 1:
+         outband.WriteArray(result)
+      else:
+         outband.WriteArray(result[i])
+   outband = None
    destination = None
 
    if maskfile is not None:
@@ -91,7 +108,6 @@ if __name__ == '__main__':
    parser.add_argument('--equation',
                        '-e',
                        help='string equation presented in quotes, e.g. "(band001 / band002)"',
-                       default=None,
                        metavar="<equation>")
    parser.add_argument('--output_folder',
                        '-o',

@@ -33,7 +33,6 @@ import logging
 import re
 import bandmath
 import web_common
-import common_functions
 
 from arsf_dem import dem_common_functions
 from common_arsf.web_functions import send_email
@@ -296,7 +295,7 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
 
          #try running the command and except on failure
          try:
-             common_functions.CallSubprocessOn(aplmask_cmd, redirect=False, logger=logger)
+             dem_common_functions.CallSubprocessOn(aplmask_cmd, redirect=False, logger=logger)
              if not os.path.exists(masked_file):
                  raise Exception("masked file not output")
          except Exception as e:
@@ -320,7 +319,7 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
       aplcorr_cmd.extend(["-igmfile", igm_file])
 
       try:
-          common_functions.CallSubprocessOn(aplcorr_cmd, redirect=False, logger=logger)
+          dem_common_functions.CallSubprocessOn(aplcorr_cmd, redirect=False, logger=logger)
           if not os.path.exists(igm_file):
               raise Exception("igm file not output by aplcorr!")
       except Exception as e:
@@ -347,7 +346,7 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
       apltran_cmd.extend(["-outproj", "osng", web_common.OSNG_SEPERATION_FILE])
 
    try:
-      common_functions.CallSubprocessOn(apltran_cmd, redirect=False, logger=logger)
+      dem_common_functions.CallSubprocessOn(apltran_cmd, redirect=False, logger=logger)
       if not os.path.exists(igm_file_transformed):
          raise Exception("igm file not output by apltran!")
    except Exception as e:
@@ -374,7 +373,7 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
    aplmap_cmd.extend(["-outputlevel", "verbose"])
 
    try:
-      log = common_functions.CallSubprocessOn(aplmap_cmd, redirect=False, logger=logger)
+      log = dem_common_functions.CallSubprocessOn(aplmap_cmd, redirect=False, logger=logger)
       if not os.path.exists(mapname):
          raise Exception("mapped file not output by aplmap!")
    except Exception as e:

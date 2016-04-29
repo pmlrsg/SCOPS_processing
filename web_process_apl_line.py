@@ -34,6 +34,8 @@ import re
 import bandmath
 import web_common
 
+import common_functions
+
 from arsf_dem import dem_common_functions
 from common_arsf.web_functions import send_email
 
@@ -222,7 +224,7 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
    """
    #set up logging
    logger = logging.getLogger()
-   output_line_name = output_line_name.replace(".","").replace("bil", "").replace("1b","")
+   output_line_name, _, _ = output_line_name.replace(".","").replace("bil", "").rpartition("1b")
    file_handler = logging.FileHandler(output_location + web_common.LOG_DIR + output_line_name.replace("1b.bil","") + "_log.txt", mode='a')
    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
    file_handler.setFormatter(formatter)
@@ -295,7 +297,7 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
 
          #try running the command and except on failure
          try:
-             dem_common_functions.CallSubprocessOn(aplmask_cmd, redirect=False, logger=logger)
+             common_functions.CallSubprocessOn(aplmask_cmd, redirect=False, logger=logger)
              if not os.path.exists(masked_file):
                  raise Exception("masked file not output")
          except Exception as e:
@@ -319,7 +321,7 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
       aplcorr_cmd.extend(["-igmfile", igm_file])
 
       try:
-          dem_common_functions.CallSubprocessOn(aplcorr_cmd, redirect=False, logger=logger)
+          common_functions.CallSubprocessOn(aplcorr_cmd, redirect=False, logger=logger)
           if not os.path.exists(igm_file):
               raise Exception("igm file not output by aplcorr!")
       except Exception as e:
@@ -346,7 +348,7 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
       apltran_cmd.extend(["-outproj", "osng", web_common.OSNG_SEPERATION_FILE])
 
    try:
-      dem_common_functions.CallSubprocessOn(apltran_cmd, redirect=False, logger=logger)
+      common_functions.CallSubprocessOn(apltran_cmd, redirect=False, logger=logger)
       if not os.path.exists(igm_file_transformed):
          raise Exception("igm file not output by apltran!")
    except Exception as e:
@@ -373,7 +375,7 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
    aplmap_cmd.extend(["-outputlevel", "verbose"])
 
    try:
-      log = dem_common_functions.CallSubprocessOn(aplmap_cmd, redirect=False, logger=logger)
+      log = common_functions.CallSubprocessOn(aplmap_cmd, redirect=False, logger=logger)
       if not os.path.exists(mapname):
          raise Exception("mapped file not output by aplmap!")
    except Exception as e:

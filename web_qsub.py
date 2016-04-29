@@ -125,6 +125,7 @@ def web_qsub(config, local=False, output=None):
    try:
       dem_name = config_file.get('DEFAULT', 'dem_name')
       if not os.path.exists(dem_name):
+         print dem_name
          raise Exception("The DEM specified does not exist!")
    except Exception as e:
       dem_common_functions.ERROR(e)

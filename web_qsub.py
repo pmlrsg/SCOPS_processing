@@ -80,6 +80,16 @@ def web_qsub(config, local=False, output=None):
    :param output:
    :return:
    """
+   logger = logging.getLogger()
+   file_handler = logging.FileHandler(web_common.QSUB_LOG_DIR + os.path.basename(config).replace(".cfg","") + "_log.txt", mode='a')
+   formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+   file_handler.setFormatter(formatter)
+   logger.handlers = []
+   logger.addHandler(file_handler)
+   logger.setLevel(logging.DEBUG)
+
+   logger.info(config)
+
    config_file = ConfigParser.SafeConfigParser()
    config_file.read(config)
    lines = config_file.sections()
@@ -93,7 +103,7 @@ def web_qsub(config, local=False, output=None):
          if not os.path.exists(output_location):
             raise Exception("specified output location does not exist!")
       except Exception as e:
-         logging.info(e)
+         logger.error(e)
          sortie = defaults["sortie"]
          if sortie == "None":
             sortie=''
@@ -123,13 +133,14 @@ def web_qsub(config, local=False, output=None):
 
    #if the dem doesn't exist generate one
    try:
+      logger.info("checking dem")
       dem_name = config_file.get('DEFAULT', 'dem_name')
+      logger.info(dem_name)
       if not os.path.exists(dem_name):
-         print dem_name
          raise Exception("The DEM specified does not exist!")
    except Exception as e:
       dem_common_functions.ERROR(e)
-      logging.error(e)
+      logger.error(e)
       dem_name = (output_location + web_common.WEB_DEM_FOLDER + defaults["project_code"] + '_' + defaults["year"] + '_' + defaults[
          "julianday"] + '_' + defaults["projection"] + ".dem").replace(' ', '_')
       arsf_dem.dem_nav_utilities.create_apl_dem_from_mosaic(dem_name,
@@ -165,8 +176,10 @@ def web_qsub(config, local=False, output=None):
                   open(bm_log_file, mode="a").close()
 
 
-
-   web_process_apl_line.email_status(defaults["email"], output_location, defaults["project_code"])
+   if not config_file.get('DEFAULT', 'status_email_sent'):
+      web_process_apl_line.email_status(defaults["email"], output_location, defaults["project_code"])
+      config_file.set('DEFAULT', "status_email_sent", "True")
+      config_file.write(open(config, 'w'))
 
    for line in lines:
       band_ratio = False
@@ -182,10 +195,10 @@ def web_qsub(config, local=False, output=None):
       if main_line or band_ratio:
          if local:
             try:
+               logger.info("processing line {}".format(line))
                web_process_apl_line.line_handler(config, line, output_location, main_line, band_ratio)
             except Exception as e:
-               logging.error("Could not process job for {}, Reason: {}".format(line, e))
-               continue
+               logger.error("Could not process job for {}, Reason: {}".format(line, e))
          else:
             #this will need to be updated to whatever parallel jobs system is
             #being used in the intended use environemnt
@@ -211,13 +224,14 @@ def web_qsub(config, local=False, output=None):
 
             qsub_args.extend(script_args)
             try:
+               logger.info("submitting line {}".format(line))
                qsub = subprocess.Popen(qsub_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             except:
-               logging.error("Could not submit qsub job. Reason: " + str(sys.exc_info()[1]))
+               logger.error("Could not submit qsub job. Reason: " + str(sys.exc_info()[1]))
                continue
-            logging.info("line submitted: " + line)
+            logger.info("line submitted: " + line)
 
-   logging.info("all lines complete")
+   logger.info("all lines complete")
 
 
 if __name__ == '__main__':

@@ -167,7 +167,6 @@ def line_handler(config_file, line_name, output_location, process_main_line, pro
       output_location = line_details["output_folder"]
    #set up folders
    jday = "{0:03d}".format(int(line_details["julianday"]))
-   line_number = str(line_name[-2:])
 
    if line_name[:1] in "f":
       sensor = "fenix"
@@ -188,7 +187,7 @@ def line_handler(config_file, line_name, output_location, process_main_line, pro
    hyper_delivery = glob.glob(folder + "/delivery/*hyperspectral*/")[0]
 
    #wildcard in the middle to make sure line number doesn't muck things up
-   lev1file=glob.glob(hyper_delivery + '/' + web_common.LEV1_FOLDER + '/' + '*' +jday+ '*' + line_number +'1b.bil')[0]
+   lev1file=glob.glob(hyper_delivery + '/' + web_common.LEV1_FOLDER + '/' + line_name +'1b.bil')[0]
    maskfile = lev1file.replace(".bil", "_mask.bil")
    band_list = config.get(line_name, 'band_range')
    if process_main_line:
@@ -234,7 +233,6 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
 
    #get the line section we want
    line_details = dict(config.items(base_line_name))
-   line_number = str(base_line_name[-2:])
    status_file = web_common.STATUS_FILE.format(output_location, output_line_name.replace("1b.bil", ""))
 
    #set our first status
@@ -287,8 +285,6 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
             mask_list, ccd_list = masklookup(line_details['masking'])
             aplmask_cmd.extend(["-flags"])
             aplmask_cmd.extend(mask_list)
-            print ccd_list
-            print ["-onlymaskmethods", maskfile.replace('mask.bil', 'mask-badpixelmethod.bil')]
             if len(ccd_list) > 0:
                aplmask_cmd.extend(["-onlymaskmethods", maskfile.replace('mask.bil', 'mask-badpixelmethod.bil')])
                aplmask_cmd.extend(ccd_list)
@@ -303,7 +299,7 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
          except Exception as e:
              status_update(status_file, "ERROR - aplmask", output_line_name)
              logger.error([e, output_line_name])
-             exit(1)
+             raise Exception(e)
 
    status_update(status_file, "aplcorr", output_line_name)
 
@@ -328,7 +324,7 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
           status_update(status_file, "ERROR - aplcorr", output_line_name)
           logger.error([e, output_line_name])
           #error_write(output_location, e,output_line_name)
-          exit(1)
+          raise Exception(e)
 
    igm_file_transformed = igm_file.replace(".igm", "_{}.igm").format(projection.replace(' ', '_'))
 
@@ -355,7 +351,7 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
       status_update(status_file, "ERROR - apltran", output_line_name)
       logger.error([e,output_line_name])
       #error_write(output_location, e,output_line_name)
-      exit(1)
+      raise Exception(e)
 
    status_update(status_file, "aplmap", output_line_name)
 
@@ -382,7 +378,7 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
       status_update(status_file, "ERROR - aplmap", output_line_name)
       logger.error([e,output_line_name])
       ##error_write(output_location, e,output_line_name)
-      exit(1)
+      raise Exception(e)
 
    status_update(status_file, "waiting to zip", output_line_name)
 

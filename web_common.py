@@ -62,6 +62,9 @@ INITIAL_STATUS = "initialising"
 #main config output/ingest point
 WEB_CONFIG_DIR = "/users/rsg/arsf/web_processing/configs/"
 
+#qsub log dir
+QSUB_LOG_DIR = "/users/rsg/arsf/web_processing/logs/qsub/"
+
 #location of the seperation file for UK BNG projections in grass
 OSNG_SEPERATION_FILE = "/users/rsg/arsf/dems/ostn02/OSTN02_NTv2.gsb"
 

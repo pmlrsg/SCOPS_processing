@@ -176,7 +176,7 @@ def web_qsub(config, local=False, output=None):
                   open(bm_log_file, mode="a").close()
 
 
-   if not config_file.get('DEFAULT', 'status_email_sent'):
+   if not config_file.getboolean('DEFAULT', 'status_email_sent'):
       web_process_apl_line.email_status(defaults["email"], output_location, defaults["project_code"])
       config_file.set('DEFAULT', "status_email_sent", "True")
       config_file.write(open(config, 'w'))

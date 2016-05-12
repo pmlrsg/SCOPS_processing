@@ -14,7 +14,11 @@ Available functions
 main(): finds all config files and tests them for submission requirements.
 """
 
-import ConfigParser
+import sys
+if sys.version_info[0] < 3:
+   import ConfigParser
+else:
+   import configparser as ConfigParser
 import os
 import web_common
 
@@ -28,6 +32,8 @@ def main():
    """
    for configfile in os.listdir(web_common.WEB_CONFIG_DIR):
       #assume we want to submit stuff until we find evidence to the contrary
+      if ".cfg" not in configfile[-4:]:
+         continue
       submit = True
       config = ConfigParser.SafeConfigParser()
       config.read(web_common.WEB_CONFIG_DIR + "/" + configfile)

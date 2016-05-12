@@ -24,7 +24,11 @@ process_web_hyper_line: main function, take a config, line name and output folde
 
 import argparse
 import os
-import ConfigParser
+import sys
+if sys.version_info[0] < 3:
+   import ConfigParser
+else:
+   import configparser as ConfigParser
 import folder_structure
 import glob
 import zipfile

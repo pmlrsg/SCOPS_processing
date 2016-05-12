@@ -22,13 +22,16 @@ the grid. Uses web_process_apl_line.py
 import os
 import folder_structure
 import datetime
-import ConfigParser
+import sys
+if sys.version_info[0] < 3:
+   import ConfigParser
+else:
+   import configparser as ConfigParser
 import argparse
 import arsf_dem
 import glob
 import logging
 import subprocess
-import sys
 import web_process_apl_line
 import web_common
 
@@ -95,6 +98,10 @@ def web_qsub(config, local=False, output=None):
    lines = config_file.sections()
    defaults = config_file.defaults()
 
+   if config.getboolean('DEFAULT', "has_error"):
+      logger.info("not processing due to pre proc errors, inspect earlier in this log to see reason")
+      exit(0)
+
 
    #if the output location doesn't exist yet we should create one
    if output is None or output == '':
@@ -146,6 +153,21 @@ def web_qsub(config, local=False, output=None):
       arsf_dem.dem_nav_utilities.create_apl_dem_from_mosaic(dem_name,
                                                    dem_source=defaults["dem"],
                                                    bil_navigation=nav_folder)
+
+   if "upload" in defaults["dem"]:
+      nav_files=glob.glob(nav_folder + "*_nav_post_processed.bil")
+      dem_bounds = arsf_dem.dem_utilities.get_gdal_dataset_bb(config_file.get('DEFAULT', 'dem_name'))
+      nav_bounds = arsf_dem.dem_nav_utilities.get_bb_from_bil_nav_files(nav_files)
+
+      if (nav_bounds[0] < dem_bounds[0] or
+      nav_bounds[1] > dem_bounds[1] or
+      nav_bounds[2] < dem_bounds[2] or
+      nav_bounds[3] > dem_bounds[3] and not config_file.has_option('DEFAULTS', 'force_dem')):
+         config.set('DEFAULT', "has_error", True)
+         config_file.write(open(config, 'w'))
+         logger.error("The DEM provided by the user does not cover the navigation area, entering an error state")
+         raise Exception("The DEM provided by the user does not cover the navigation area, entering an error state")
+
    #update config with the dem name then submit the file to the processor, we don't want the script to run twice so set
    # submitted to true
    config_file.set('DEFAULT', "dem_name", dem_name)

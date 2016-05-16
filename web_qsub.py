@@ -98,7 +98,7 @@ def web_qsub(config, local=False, output=None):
    lines = config_file.sections()
    defaults = config_file.defaults()
 
-   if config.getboolean('DEFAULT', "has_error"):
+   if config_file.getboolean('DEFAULT', "has_error"):
       logger.info("not processing due to pre proc errors, inspect earlier in this log to see reason")
       exit(0)
 
@@ -163,8 +163,9 @@ def web_qsub(config, local=False, output=None):
       nav_bounds[1] > dem_bounds[1] or
       nav_bounds[2] < dem_bounds[2] or
       nav_bounds[3] > dem_bounds[3] and not config_file.has_option('DEFAULTS', 'force_dem')):
-         config.set('DEFAULT', "has_error", True)
+         config_file.set('DEFAULT', "has_error", "True")
          config_file.write(open(config, 'w'))
+         web_process_apl_line.email_preprocessing_error(defaults['email'], output_location, defaults['project_code'], reason="dem_coverage")
          logger.error("The DEM provided by the user does not cover the navigation area, entering an error state")
          raise Exception("The DEM provided by the user does not cover the navigation area, entering an error state")
 
@@ -172,6 +173,7 @@ def web_qsub(config, local=False, output=None):
    # submitted to true
    config_file.set('DEFAULT', "dem_name", dem_name)
    config_file.set('DEFAULT', "submitted", "True")
+   config_file.set('DEFAULT', "restart", "False")
    config_file.write(open(config, 'w'))
 
    #Generate a status file for each line to be processed, these are important later!

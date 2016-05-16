@@ -68,14 +68,14 @@ QSUB_LOG_DIR = "/users/rsg/arsf/web_processing/logs/qsub/"
 #location of the seperation file for UK BNG projections in grass
 OSNG_SEPERATION_FILE = "/users/rsg/arsf/dems/ostn02/OSTN02_NTv2.gsb"
 
+SERVER_BASE = 'https://arsf-dandev.nerc.ac.uk'
+
 
 #both these link variables need to be updated to the main processor URL
-DOWNLOAD_LINK = 'https://arsf-dandev.nerc.ac.uk/processor/downloads/{}?&project={}'
+DOWNLOAD_LINK = SERVER_BASE + '/processor/downloads/{}?&project={}'
 
 #http location to access the status page
-STATUS_LINK = 'https://arsf-dandev.nerc.ac.uk/processor/status/{}?&project={}'
-
-
+STATUS_LINK = SERVER_BASE +'/processor/status/{}?&project={}'
 
 #it's preferable these aren't updated as they are needed by the web front end,
 #if they really have to be they should be updated in arsf_process_page.py as well.

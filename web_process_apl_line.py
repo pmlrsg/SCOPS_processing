@@ -129,12 +129,25 @@ def email_status(pi_email, output_location, project):
    status_link = web_common.STATUS_LINK.format(output_location, project)
    message = "This is to notify you that your ARSF data order has begun processing. You can track its progress at the following URL:\n\n" \
              "{}\n\n" \
-             "You will receive a final email once all data has completed processing\n"\
+             "You will receive a final email once all data has completed processing.\n"\
              "Regards,\n"\
              "ARSF"
 
    message=message.format(status_link)
-   send_email(message, pi_email, output_location + " order processing", "arsf-processing@pml.ac.uk")
+   send_email(message, pi_email, output_location + " order processing", web_common.SEND_EMAIL)
+
+def email_preprocessing_error(pi_email, output_location, project, reason):
+   output_location = os.path.basename(os.path.normpath(output_location))
+   if reason is 'dem_coverage':
+      message="This is to notify you that your ARSF data order has encountered an error. The dem you uploaded does not cover enough of the project area. You can upload a new DEM file or choose to generate one at the link below.\n\n" \
+              "{}\n\n" \
+              "Once a new file has been uploaded your processing will progress.\n" \
+              "Regards,\n" \
+              "ARSF"
+      error_link = web_common.SERVER_BASE + '/dem_error/' + output_location + '&?project=' + project
+      message=message.format(error_link)
+
+   send_email(message, pi_email, output_location + ' processing error', web_common.SEND_EMAIL)
 
 
 def status_update(status_file, newstage, line):

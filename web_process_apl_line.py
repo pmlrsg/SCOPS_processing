@@ -144,7 +144,7 @@ def email_preprocessing_error(pi_email, output_location, project, reason):
               "Once a new file has been uploaded your processing will progress.\n" \
               "Regards,\n" \
               "ARSF"
-      error_link = web_common.SERVER_BASE + '/dem_error/' + output_location + '&?project=' + project
+      error_link = web_common.SERVER_BASE + '/dem_error/' + output_location + '?project=' + project
       message=message.format(error_link)
 
    send_email(message, pi_email, output_location + ' processing error', web_common.SEND_EMAIL)

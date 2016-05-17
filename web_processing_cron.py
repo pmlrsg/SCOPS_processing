@@ -32,7 +32,6 @@ def main():
    """
    for configfile in os.listdir(web_common.WEB_CONFIG_DIR):
       #assume we want to submit stuff until we find evidence to the contrary
-      print configfile
       if ".cfg" not in configfile[-4:]:
          continue
       submit = True

@@ -37,9 +37,23 @@ import logging
 import re
 import bandmath
 import web_common
+import smtplib
+from email.mime.text import MIMEText
 
 from arsf_dem import dem_common_functions
-from common_arsf.web_functions import send_email
+
+def send_email(message, receive, subject, sender):
+   """
+   Sends an email using smtplib
+   """
+   msg = MIMEText(message)
+   msg['From'] = sender
+   msg['To'] = receive
+   msg['Subject'] = subject
+
+   mailer = smtplib.SMTP('localhost')
+   mailer.sendmail(sender, [receive], msg.as_string())
+
 
 def masklookup(mask_string):
    """

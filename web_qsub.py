@@ -110,7 +110,7 @@ def web_qsub(config, local=False, output=None):
          if not os.path.exists(output_location):
             raise Exception("specified output location does not exist!")
       except Exception as e:
-         logger.error(e)
+         logger.warning(e)
          sortie = defaults["sortie"]
          if sortie == "None":
             sortie=''
@@ -146,13 +146,18 @@ def web_qsub(config, local=False, output=None):
       if not os.path.exists(dem_name):
          raise Exception("The DEM specified does not exist!")
    except Exception as e:
-      dem_common_functions.ERROR(e)
-      logger.error(e)
-      dem_name = (output_location + web_common.WEB_DEM_FOLDER + defaults["project_code"] + '_' + defaults["year"] + '_' + defaults[
-         "julianday"] + '_' + defaults["projection"] + ".dem").replace(' ', '_')
-      arsf_dem.dem_nav_utilities.create_apl_dem_from_mosaic(dem_name,
-                                                   dem_source=defaults["dem"],
-                                                   bil_navigation=nav_folder)
+      dem_common_functions.WARNING(str(e))
+      logger.warning(str(e))
+      if config_file.getboolean("DEFAULT", "ftp_dem"):
+         logger.error("The config suggests this DEM was sourced from the ftp, confirm it exists and is correct as the system cannot find it.")
+         config_file.set('DEFAULT', "has_error", "True")
+         raise Exception("The DEM provided does not exist, entering an error state")
+      else:
+         dem_name = (output_location + web_common.WEB_DEM_FOLDER + defaults["project_code"] + '_' + defaults["year"] + '_' + defaults[
+            "julianday"] + '_' + defaults["projection"] + ".dem").replace(' ', '_')
+         arsf_dem.dem_nav_utilities.create_apl_dem_from_mosaic(dem_name,
+                                                      dem_source=defaults["dem"],
+                                                      bil_navigation=nav_folder)
 
    if "upload" in defaults["dem"]:
       nav_files=glob.glob(nav_folder + "*_nav_post_processed.bil")

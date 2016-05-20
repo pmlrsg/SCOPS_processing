@@ -32,33 +32,40 @@ def main():
    """
    for configfile in os.listdir(web_common.WEB_CONFIG_DIR):
       #assume we want to submit stuff until we find evidence to the contrary
+      print configfile
       if ".cfg" not in configfile[-4:]:
          continue
       submit = True
       config = ConfigParser.SafeConfigParser()
       config.read(web_common.WEB_CONFIG_DIR + "/" + configfile)
 
-      if config.get("DEFAULT", "submitted") in "True":
+      if config.getboolean("DEFAULT", "submitted"):
          #we don't want to submit twice
          submit = False
 
-      if config.get("DEFAULT", "confirmed") in "False":
+      if not config.getboolean("DEFAULT", "confirmed"):
          #if it hasn't been confirmed its not being submitted
          submit = False
 
-      if config.get("DEFAULT", "bandratio") in "True":
+      if config.getboolean("DEFAULT", "bandratio"):
          #if they said they wanted to bandratio but it isn't finished we shouldn't continue
-         if config.get("DEFAULT", "bandratioset") in "False" and config.get("DEFAULT", "bandratiomappedset") in "False":
+         if not config.getboolean("DEFAULT", "bandratioset") and not config.getboolean("DEFAULT", "bandratiomappedset"):
             submit = False
             #TODO if its existed for more than a day send a reminder with a link
             #to the band ratio page, maybe a cancellation option?
 
-      if config.get("DEFAULT", "restart") in "True":
+      if config.getboolean("DEFAULT", "restart"):
          submit = True
 
-      if config.get("DEFAULT", "has_error") in "True":
+      if config.getboolean("DEFAULT", "has_error"):
          submit = False
 
+      if config.has_option("DEFAULT", "ftp_dem"):
+         if config.getboolean("DEFAULT", "ftp_dem"):
+            submit = False
+            if config.getboolean("DEFAULT", "ftp_dem_confirmed"):
+               submit = True
+      
       if submit:
          #finally submit the jobs
          print web_common.QSUB_COMMAND

@@ -105,7 +105,7 @@ def email_error(stage, line, error, processing_folder):
              "Once the issue has been resolved update the relevant status file to state either 'complete' or 'waiting to zip' (dependant on what you've done)"
 
    message = message.format(line, stage, error, processing_folder)
-   common_arsf.web_functions.send_email(message, web_common.ERROR_EMAIL, processing_folder + " ERROR", web_common.SEND_EMAIL)
+   send_email(message, web_common.ERROR_EMAIL, processing_folder + " ERROR", web_common.SEND_EMAIL)
 
 
 def email_PI(pi_email, output_location, project):
@@ -127,7 +127,7 @@ def email_PI(pi_email, output_location, project):
              'ARSF'
 
    message = message.format(folder_name, download_link)
-   common_arsf.web_functions.send_email(message, pi_email, folder_name + " order complete", web_common.SEND_EMAIL)
+   send_email(message, pi_email, folder_name + " order complete", web_common.SEND_EMAIL)
 
 def email_status(pi_email, output_location, project):
    """

@@ -39,6 +39,12 @@ def main():
       config = ConfigParser.SafeConfigParser()
       config.read(web_common.WEB_CONFIG_DIR + "/" + configfile)
 
+      if config.has_option("DEFAULT", "ftp_dem"):
+         if config.getboolean("DEFAULT", "ftp_dem"):
+            submit = False
+            if config.getboolean("DEFAULT", "ftp_dem_confirmed"):
+               submit = True
+
       if config.getboolean("DEFAULT", "submitted"):
          #we don't want to submit twice
          submit = False
@@ -60,12 +66,6 @@ def main():
       if config.getboolean("DEFAULT", "has_error"):
          submit = False
 
-      if config.has_option("DEFAULT", "ftp_dem"):
-         if config.getboolean("DEFAULT", "ftp_dem"):
-            submit = False
-            if config.getboolean("DEFAULT", "ftp_dem_confirmed"):
-               submit = True
-      
       if submit:
          #finally submit the jobs
          print web_common.QSUB_COMMAND

@@ -329,6 +329,8 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
              status_update(status_file, "ERROR - aplmask", output_line_name)
              logger.error([e, output_line_name])
              raise Exception(e)
+      else:
+         masked_file = input_lev1_file
 
    status_update(status_file, "aplcorr", output_line_name)
 
@@ -398,6 +400,7 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
    aplmap_cmd.extend(["-mapname", mapname])
    aplmap_cmd.extend(["-buffersize", str(4096)])
    aplmap_cmd.extend(["-outputlevel", "verbose"])
+
 
    try:
       log = dem_common_functions.CallSubprocessOn(aplmap_cmd, redirect=False, logger=logger)

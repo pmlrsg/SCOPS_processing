@@ -42,7 +42,7 @@ from email.mime.text import MIMEText
 
 from arsf_dem import dem_common_functions
 
-def send_email(message, receive, subject, sender):
+def send_email(message, receive, subject, sender, no_bcc=False):
    """
    Sends an email using smtplib
    """
@@ -50,9 +50,19 @@ def send_email(message, receive, subject, sender):
    msg['From'] = sender
    msg['To'] = receive
    msg['Subject'] = subject
+   recipients = []
+   recipients.extend([receive])
+   if not no_bcc:
+      recipients.extend([web_common.BCC_EMAIL, web_common.ERROR_EMAIL])
 
-   mailer = smtplib.SMTP('localhost')
-   mailer.sendmail(sender, [receive], msg.as_string())
+   try:
+      for recipient in recipients:
+         mailer = smtplib.SMTP('localhost')
+         response = mailer.sendmail(sender, recipient, msg.as_string())
+         mailer.close()
+   except Exception as e:
+      print str(e)
+      exit(1)
 
 
 def masklookup(mask_string):
@@ -220,7 +230,7 @@ def line_handler(config_file, line_name, output_location, process_main_line, pro
    maskfile = lev1file.replace(".bil", "_mask.bil")
    band_list = config.get(line_name, 'band_range')
    if process_main_line:
-      process_web_hyper_line(config, line_name, os.path.basename(lev1file), band_list, output_location, lev1file, hyper_delivery, input_lev1_file=None)
+      process_web_hyper_line(config, line_name, os.path.basename(lev1file), band_list, output_location, lev1file, hyper_delivery, input_lev1_file=None, data_type="uint16")
 
    if process_band_ratio:
       equations = [x for x in dict(config.items(line_name)) if "eq_" in x]
@@ -238,7 +248,7 @@ def line_handler(config_file, line_name, output_location, process_main_line, pro
             process_web_hyper_line(config, line_name, os.path.basename(bm_file), band_list, output_location, lev1file, hyper_delivery, input_lev1_file=bm_file, maskfile=bandmath_maskfile)
 
 
-def process_web_hyper_line(config, base_line_name, output_line_name, band_list, output_location, lev1file, hyper_delivery, input_lev1_file=None, skip_stages=[], maskfile=None):
+def process_web_hyper_line(config, base_line_name, output_line_name, band_list, output_location, lev1file, hyper_delivery, input_lev1_file=None, skip_stages=[], maskfile=None, data_type="float32"):
    """
    Main function, takes a line and processes it through APL, generates a log file for each line with the output from APL
 
@@ -400,6 +410,7 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
    aplmap_cmd.extend(["-mapname", mapname])
    aplmap_cmd.extend(["-buffersize", str(4096)])
    aplmap_cmd.extend(["-outputlevel", "verbose"])
+   aplmap_cmd.extend(["-outputdatatype", data_type])
 
 
    try:

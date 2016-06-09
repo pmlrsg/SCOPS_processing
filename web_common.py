@@ -17,7 +17,7 @@ import os
 COMMON_LOCATION = os.path.dirname(os.path.realpath(__file__))
 
 #forces processing to occur on the machine running the submission cron job
-FORCE_LOCAL = True
+FORCE_LOCAL = False
 
 #the location of the main processing executable
 PROCESS_COMMAND = COMMON_LOCATION + "/web_process_apl_line.py"
@@ -96,5 +96,9 @@ QUEUE = "lowpriority.q"
 #sender of all emails
 SEND_EMAIL = "arsf-processing@pml.ac.uk"
 
+#email to bcc anything sent to
+BCC_EMAIL = "arsf-code@pml.ac.uk"
+
 #address errors will be sent to
-ERROR_EMAIL = "stgo@pml.ac.uk" #TODO change from stgo!
+#TODO change from stgo!
+ERROR_EMAIL = "stgo@pml.ac.uk"

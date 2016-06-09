@@ -159,20 +159,21 @@ def web_qsub(config, local=False, output=None):
                                                       dem_source=defaults["dem"],
                                                       bil_navigation=nav_folder)
 
-   if "upload" in defaults["dem"]:
-      nav_files=glob.glob(nav_folder + "*_nav_post_processed.bil")
-      dem_bounds = arsf_dem.dem_utilities.get_gdal_dataset_bb(config_file.get('DEFAULT', 'dem_name'))
-      nav_bounds = arsf_dem.dem_nav_utilities.get_bb_from_bil_nav_files(nav_files)
+   if not config_file.has_option('DEFAULT', 'force_dem'):
+      if "upload" in defaults["dem"]:
+         nav_files=glob.glob(nav_folder + "*_nav_post_processed.bil")
+         dem_bounds = arsf_dem.dem_utilities.get_gdal_dataset_bb(config_file.get('DEFAULT', 'dem_name'))
+         nav_bounds = arsf_dem.dem_nav_utilities.get_bb_from_bil_nav_files(nav_files)
 
-      if (nav_bounds[0] < dem_bounds[0] or
-      nav_bounds[1] > dem_bounds[1] or
-      nav_bounds[2] < dem_bounds[2] or
-      nav_bounds[3] > dem_bounds[3] and not config_file.has_option('DEFAULTS', 'force_dem')):
-         config_file.set('DEFAULT', "has_error", "True")
-         config_file.write(open(config, 'w'))
-         web_process_apl_line.email_preprocessing_error(defaults['email'], output_location, defaults['project_code'], reason="dem_coverage")
-         logger.error("The DEM provided by the user does not cover the navigation area, entering an error state")
-         raise Exception("The DEM provided by the user does not cover the navigation area, entering an error state")
+         if (nav_bounds[0] < dem_bounds[0] or
+         nav_bounds[1] > dem_bounds[1] or
+         nav_bounds[2] < dem_bounds[2] or
+         nav_bounds[3] > dem_bounds[3]):
+            config_file.set('DEFAULT', "has_error", "True")
+            config_file.write(open(config, 'w'))
+            web_process_apl_line.email_preprocessing_error(defaults['email'], output_location, defaults['project_code'], reason="dem_coverage")
+            logger.error("The DEM provided by the user does not cover the navigation area, entering an error state")
+            raise Exception("The DEM provided by the user does not cover the navigation area, entering an error state")
 
    #update config with the dem name then submit the file to the processor, we don't want the script to run twice so set
    # submitted to true
@@ -204,8 +205,9 @@ def web_qsub(config, local=False, output=None):
                   open(bm_status_file, 'w+').write("{} = {}".format((line + equation.replace("eq_", "_")), "waiting"))
                   open(bm_log_file, mode="a").close()
 
-
+   print "test1"
    if not config_file.getboolean('DEFAULT', 'status_email_sent'):
+      print "test2"
       web_process_apl_line.email_status(defaults["email"], output_location, defaults["project_code"])
       config_file.set('DEFAULT', "status_email_sent", "True")
       config_file.write(open(config, 'w'))

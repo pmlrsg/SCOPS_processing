@@ -237,12 +237,13 @@ def web_qsub(config, local=False, output=None):
             qsub_args.extend(["-N", "WEB_" + defaults["project_code"] + "_" + line])
             qsub_args.extend(["-q", web_common.QUEUE])
             qsub_args.extend(["-P", "arsfdan"])
-            qsub_args.extend(["-wd", os.getcwd()])
+            qsub_args.extend(["-wd", web_common.WEB_OUTPUT])
             qsub_args.extend(["-e", web_common.LOG_DIR])
             qsub_args.extend(["-o", web_common.LOG_DIR])
             qsub_args.extend(["-m", "n"]) # Don't send mail
             qsub_args.extend(["-p", "-100"])
             qsub_args.extend(["-b", "y"])
+            qsub_args.extend(["-l", "apl_throttle=1"])
             script_args = [web_common.PROCESS_COMMAND]
             script_args.extend(["-l", line])
             script_args.extend(["-c", config])
@@ -256,7 +257,12 @@ def web_qsub(config, local=False, output=None):
             qsub_args.extend(script_args)
             try:
                logger.info("submitting line {}".format(line))
+               logger.info("qsub command: {}".format(" ".join(qsub_args)))
                qsub = subprocess.Popen(qsub_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+               out, err = qsub.communicate()
+               logger.info(out)
+               if err:
+                  logger.error(err)
             except:
                logger.error("Could not submit qsub job. Reason: " + str(sys.exc_info()[1]))
                continue

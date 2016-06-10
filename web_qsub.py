@@ -243,6 +243,7 @@ def web_qsub(config, local=False, output=None):
             qsub_args.extend(["-m", "n"]) # Don't send mail
             qsub_args.extend(["-b", "y"])
             qsub_args.extend(["-l", "apl_throttle=1"])
+            qsub_args.extend(["-l", "apl_web_throttle=1"])
             script_args = [web_common.PROCESS_COMMAND]
             script_args.extend(["-l", line])
             script_args.extend(["-c", config])

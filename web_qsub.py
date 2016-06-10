@@ -238,10 +238,9 @@ def web_qsub(config, local=False, output=None):
             qsub_args.extend(["-q", web_common.QUEUE])
             qsub_args.extend(["-P", "arsfdan"])
             qsub_args.extend(["-wd", web_common.WEB_OUTPUT])
-            qsub_args.extend(["-e", web_common.LOG_DIR])
-            qsub_args.extend(["-o", web_common.LOG_DIR])
+            qsub_args.extend(["-e", web_common.QSUB_LOG_DIR])
+            qsub_args.extend(["-o", web_common.QSUB_LOG_DIR])
             qsub_args.extend(["-m", "n"]) # Don't send mail
-            qsub_args.extend(["-p", "-100"])
             qsub_args.extend(["-b", "y"])
             qsub_args.extend(["-l", "apl_throttle=1"])
             script_args = [web_common.PROCESS_COMMAND]

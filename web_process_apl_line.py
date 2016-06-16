@@ -463,30 +463,31 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
    status_update(status_file, "complete", output_line_name)
 
    #if all the files are complete its time to zip them together
-   all_check = True
-   for status in os.listdir(output_location + web_common.STATUS_DIR):
-      for l in open(output_location + web_common.STATUS_DIR + status):
-         if "complete" not in l:
-            if "not processing" not in l:
-               all_check = False
+   if last_process:
+      all_check = True
+      for status in os.listdir(output_location + web_common.STATUS_DIR):
+         for l in open(output_location + web_common.STATUS_DIR + status):
+            if "complete" not in l:
+               if "not processing" not in l:
+                  all_check = False
 
-   if all_check:
-      #if all are finished we'll use this process to zip all the zipped mapped files into one for download
-      zip_mapped_folder = glob.glob(output_location + web_common.WEB_MAPPED_OUTPUT + "*.bil.zip")
-      zip_contents_file = open(output_location + web_common.WEB_MAPPED_OUTPUT + "zip_contents.txt", 'a')
-      for zip_mapped in zip_mapped_folder:
-         zip_contents_file.write(zip_mapped + "\n")
-      zip_contents_file.close()
-      logger.info("outputting master zip")
-      with zipfile.ZipFile(output_location + web_common.WEB_MAPPED_OUTPUT + line_details["project_code"] + '_' + line_details[
-         "year"] + jday + '.zip', 'a', zipfile.ZIP_DEFLATED, allowZip64=True) as zip:
+      if all_check:
+         #if all are finished we'll use this process to zip all the zipped mapped files into one for download
+         zip_mapped_folder = glob.glob(output_location + web_common.WEB_MAPPED_OUTPUT + "*.bil.zip")
+         zip_contents_file = open(output_location + web_common.WEB_MAPPED_OUTPUT + "zip_contents.txt", 'a')
          for zip_mapped in zip_mapped_folder:
-            logger.info("zipping " + zip_mapped)
-            zip.write(zip_mapped, line_details["project_code"] + '_' + line_details["year"] + jday + "/" + os.path.basename(zip_mapped))
-         #must close the file or it won't have final bits
-         zip.close()
-      #this *shouldn't* trigger until the zip file finishes
-      email_PI(line_details["email"], output_location, line_details["project_code"])
+            zip_contents_file.write(zip_mapped + "\n")
+         zip_contents_file.close()
+         logger.info("outputting master zip")
+         with zipfile.ZipFile(output_location + web_common.WEB_MAPPED_OUTPUT + line_details["project_code"] + '_' + line_details[
+            "year"] + jday + '.zip', 'a', zipfile.ZIP_DEFLATED, allowZip64=True) as zip:
+            for zip_mapped in zip_mapped_folder:
+               logger.info("zipping " + zip_mapped)
+               zip.write(zip_mapped, line_details["project_code"] + '_' + line_details["year"] + jday + "/" + os.path.basename(zip_mapped))
+            #must close the file or it won't have final bits
+            zip.close()
+         #this *shouldn't* trigger until the zip file finishes
+         email_PI(line_details["email"], output_location, line_details["project_code"])
 
 
 if __name__ == '__main__':

@@ -251,7 +251,7 @@ def line_handler(config_file, line_name, output_location, process_main_line, pro
                band_list = "1"
             bandmath_maskfile = bm_file.replace(".bil", "_mask.bil")
             polite_eq_name = eq_name.replace("eq_", "")
-            if enum == len(bands)-1:
+            if enum == len(equations)-1:
                last_process = True
             process_web_hyper_line(config, line_name, os.path.basename(bm_file), band_list, output_location, lev1file, hyper_delivery, input_lev1_file=bm_file, maskfile=bandmath_maskfile, eq_name=polite_eq_name, last_process=last_process)
 

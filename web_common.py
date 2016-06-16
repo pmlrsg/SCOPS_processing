@@ -91,7 +91,7 @@ VIEW_VECTOR_FILE = "/sensor_FOV_vectors/{}_fov_fullccd_vectors.bil"
 QSUB_COMMAND = os.path.abspath(os.path.join(__file__, os.pardir)) + '/' + 'web_qsub.py'
 
 #The main queue to be submitted to
-QUEUE = "lowpriority.q"
+QUEUE = "arsf.q"
 
 #sender of all emails
 SEND_EMAIL = "arsf-processing@pml.ac.uk"

@@ -228,27 +228,35 @@ def line_handler(config_file, line_name, output_location, process_main_line, pro
    #wildcard in the middle to make sure line number doesn't muck things up
    lev1file=glob.glob(hyper_delivery + '/' + web_common.LEV1_FOLDER + '/' + line_name +'1b.bil')[0]
    maskfile = lev1file.replace(".bil", "_mask.bil")
+   badpix_mask =  lev1file.replace(".bil", "_mask-badpixelmethod.bil")
    band_list = config.get(line_name, 'band_range')
    if process_main_line:
-      process_web_hyper_line(config, line_name, os.path.basename(lev1file), band_list, output_location, lev1file, hyper_delivery, input_lev1_file=None, data_type="uint16")
+      if process_band_ratio:
+         last_process = False
+      process_web_hyper_line(config, line_name, os.path.basename(lev1file), band_list, output_location, lev1file, hyper_delivery, input_lev1_file=None, data_type="uint16", last_process=last_process)
 
    if process_band_ratio:
       equations = [x for x in dict(config.items(line_name)) if "eq_" in x]
-      for eq_name in equations:
+      for enum, eq_name in enumerate(equations):
+         last_process=False
          if config.get(line_name, eq_name) in "True":
             equation = config.get('DEFAULT', eq_name)
-            band_numbers = re.findall(r'band(\d{3})', equation)
+            band_numbers = re.findall(r'band(\d{1,3})', equation)
+            print(band_numbers)
             output_location_updated = output_location + "/level1b"
-            bm_file, bands = bandmath.bandmath(lev1file, equation, output_location_updated, band_numbers, eqname=eq_name.replace("eq_", ""), maskfile=maskfile)
+            bm_file, bands = bandmath.bandmath(lev1file, equation, output_location_updated, band_numbers, eqname=eq_name.replace("eq_", ""), maskfile=maskfile, badpix_mask=badpix_mask)
             if bands > 1:
                band_list = config.get(line_name, 'band_range')
             else:
                band_list = "1"
             bandmath_maskfile = bm_file.replace(".bil", "_mask.bil")
-            process_web_hyper_line(config, line_name, os.path.basename(bm_file), band_list, output_location, lev1file, hyper_delivery, input_lev1_file=bm_file, maskfile=bandmath_maskfile)
+            polite_eq_name = eq_name.replace("eq_", "")
+            if enum == len(bands)-1:
+               last_process = True
+            process_web_hyper_line(config, line_name, os.path.basename(bm_file), band_list, output_location, lev1file, hyper_delivery, input_lev1_file=bm_file, maskfile=bandmath_maskfile, eq_name=polite_eq_name, last_process=last_process)
 
 
-def process_web_hyper_line(config, base_line_name, output_line_name, band_list, output_location, lev1file, hyper_delivery, input_lev1_file=None, skip_stages=[], maskfile=None, data_type="float32"):
+def process_web_hyper_line(config, base_line_name, output_line_name, band_list, output_location, lev1file, hyper_delivery, input_lev1_file=None, skip_stages=[], maskfile=None, data_type="float32", eq_name=None, last_process=False):
    """
    Main function, takes a line and processes it through APL, generates a log file for each line with the output from APL
 
@@ -263,7 +271,10 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
    #set up logging
    logger = logging.getLogger()
    output_line_name, _, _ = output_line_name.replace(".","").replace("bil", "").rpartition("1b")
-   file_handler = logging.FileHandler(output_location + web_common.LOG_DIR + output_line_name.replace("1b.bil","") + "_log.txt", mode='a')
+   logstat_name = output_line_name.replace("1b.bil","")
+   if eq_name:
+      logstat_name = logstat_name +"_"+ eq_name
+   file_handler = logging.FileHandler(output_location + web_common.LOG_DIR + logstat_name + "_log.txt", mode='a')
    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
    file_handler.setFormatter(formatter)
    logger.handlers = []
@@ -272,10 +283,11 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
 
    #get the line section we want
    line_details = dict(config.items(base_line_name))
-   status_file = web_common.STATUS_FILE.format(output_location, output_line_name.replace("1b.bil", ""))
+   status_file = web_common.STATUS_FILE.format(output_location, logstat_name)
 
    #set our first status
-   open(status_file, 'w+').write("{} = {}".format(output_line_name,  web_common.INITIAL_STATUS))
+   open(status_file, 'w+').write("{} = {}".format(logstat_name,  web_common.INITIAL_STATUS))
+   output_line_name = logstat_name
 
    jday = "{0:03d}".format(int(line_details["julianday"]))
 

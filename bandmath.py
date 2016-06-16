@@ -24,7 +24,33 @@ import os
 import argparse
 import re
 
-def bandmath(bilfile, equation, outputfolder, bands, eqname=None, maskfile=None):
+def bandmath_mask_gen(maskfile, output_name, bands, layers, rows, cols):
+   maskbil = gdal.Open(maskfile)
+   if layers == 1:
+      #if it's one we need to combine it down
+      maskarrays=[]
+      basemask=numpy.zeros((rows, cols), dtype=float)
+      for band in bands:
+         numpy.add(maskbil.GetRasterBand(int(band)).ReadAsArray(), basemask)
+      maskarray=basemask
+   if layers > 1:
+      maskarray = maskbil.ReadAsArray()
+   destination = gdal.GetDriverByName('ENVI').Create(output_name,
+                                             cols,
+                                             rows,
+                                             layers,
+                                             gdal.GDT_Byte,
+                                             ["INTERLEAVE=BIL"])
+   for i in range(layers):
+      outband = destination.GetRasterBand(i+1)
+      if layers == 1:
+         outband.WriteArray(maskarray)
+      else:
+         outband.WriteArray(maskarray[i])
+   outband = None
+   destination = None
+
+def bandmath(bilfile, equation, outputfolder, bands, eqname=None, maskfile=None, badpix_mask=None):
    """
    Function to run a string equation, hand in a bilfile and a list of bands
    required.
@@ -36,10 +62,13 @@ def bandmath(bilfile, equation, outputfolder, bands, eqname=None, maskfile=None)
    bil = gdal.Open(bilfile)
    banddict = {}
    #we need to build a dictionary of band variables to hand in to numexpr
+   print(bands)
    for band in bands:
+      print(band)
       banddict["band{}".format(band)] = \
                 bil.GetRasterBand(int(band)).ReadAsArray().astype(numpy.float32)
    #local dict becomes the variable list
+   print(banddict)
    result = numexpr.evaluate(equation,
                              local_dict=banddict)
    #need to come up with something sernsible to use as the name
@@ -76,32 +105,15 @@ def bandmath(bilfile, equation, outputfolder, bands, eqname=None, maskfile=None)
    destination = None
 
    if maskfile is not None:
-      maskbil = gdal.Open(maskfile)
-      if layers == 1:
-         #if it's one we need to combine it down
-         maskarrays=[]
-         basemask=numpy.zeros((rows, cols), dtype=float)
-         for band in bands:
-            numpy.add(maskbil.GetRasterBand(int(band)).ReadAsArray(), basemask)
-      if layers > 1:
-         maskarray = maskbil.ReadAsArray()
-      destination = gdal.GetDriverByName('ENVI').Create(output_name.replace(".bil", "_mask.bil"),
-                                                cols,
-                                                rows,
-                                                layers,
-                                                gdal.GDT_Byte,
-                                                ["INTERLEAVE=BIL"])
-      for i in range(layers):
-         outband = destination.GetRasterBand(i+1)
-         if layers == 1:
-            outband.WriteArray(result)
-         else:
-            outband.WriteArray(result[i])
-      outband = None
-      destination = None
+      bandmath_mask_gen(maskfile, output_name.replace(".bil", "_mask.bil"), bands, layers, rows, cols)
 
+   if badpix_mask is not None:
+      bandmath_mask_gen(badpix_mask, output_name.replace(".bil","_mask-badpixelmethod.bil"), bands, layers, rows, cols)
 
    return output_name, layers
+
+
+
 
 if __name__ == '__main__':
    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)

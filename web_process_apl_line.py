@@ -231,6 +231,7 @@ def line_handler(config_file, line_name, output_location, process_main_line, pro
    maskfile = lev1file.replace(".bil", "_mask.bil")
    badpix_mask =  lev1file.replace(".bil", "_mask-badpixelmethod.bil")
    band_list = config.get(line_name, 'band_range')
+   last_process=True
    if process_main_line:
       if process_band_ratio:
          last_process = False

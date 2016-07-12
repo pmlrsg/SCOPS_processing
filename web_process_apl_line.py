@@ -39,6 +39,7 @@ import bandmath
 import web_common
 import smtplib
 from email.mime.text import MIMEText
+import platform
 
 from arsf_dem import dem_common_functions
 
@@ -230,6 +231,7 @@ def line_handler(config_file, line_name, output_location, process_main_line, pro
    maskfile = lev1file.replace(".bil", "_mask.bil")
    badpix_mask =  lev1file.replace(".bil", "_mask-badpixelmethod.bil")
    band_list = config.get(line_name, 'band_range')
+   last_process=True
    if process_main_line:
       if process_band_ratio:
          last_process = False
@@ -280,6 +282,12 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
    logger.handlers = []
    logger.addHandler(file_handler)
    logger.setLevel(logging.DEBUG)
+
+   #ouput host details - may be useful for debugging
+   nameinfo=platform.uname()
+   distinfo=platform.dist()
+   platformstring=" ".join(nameinfo)+"\n"+" ".join(distinfo)
+   logger.info(platformstring)
 
    #get the line section we want
    line_details = dict(config.items(base_line_name))

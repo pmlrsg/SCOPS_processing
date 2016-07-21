@@ -467,7 +467,7 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
          zip.write(mapname + ".hdr", os.path.basename(mapname + ".hdr"))
          zip.close()
          zip_created = True
-   except:
+   except Exception as e:
       zip_created = False
 
    if zip_created:

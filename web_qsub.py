@@ -212,6 +212,11 @@ def web_qsub(config, local=False, output=None):
       config_file.set('DEFAULT', "status_email_sent", "True")
       config_file.write(open(config, 'w'))
 
+   try:
+      filesizes = list(open(glob.glob(hyper_delivery + "/flightlines/mapped/unzipped_filesize.csv")[0]))
+   except Exception as e:
+      filesizes = None
+
    for line in lines:
       band_ratio = False
       main_line = False
@@ -244,6 +249,17 @@ def web_qsub(config, local=False, output=None):
             qsub_args.extend(["-b", "y"])
             qsub_args.extend(["-l", "apl_throttle=1"])
             qsub_args.extend(["-l", "apl_web_throttle=1"])
+            try:
+               if not filesizes is None:
+                  filesize = int([x for x in filesizes if line in x][0].split(",")[1].replace("G\n", ""))
+                  filesize += filesize * 0.5
+               else:
+                  #we couldnt find a filesize - default to 100GB
+                  filesize = 100
+            except Exception as e:
+               #something went wrong so we should default to 100GB
+               filesize = 100
+            qsub_args.extend(["-l", "tmpfree={}".format(filesize)])
             script_args = [web_common.PROCESS_COMMAND]
             script_args.extend(["-l", line])
             script_args.extend(["-c", config])

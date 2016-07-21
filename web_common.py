@@ -102,3 +102,6 @@ BCC_EMAIL = "arsf-code@pml.ac.uk"
 #address errors will be sent to
 #TODO change from stgo!
 ERROR_EMAIL = "stgo@pml.ac.uk"
+
+#whether to process on local file system of gridnodes
+TEMP_PROCESSING = True

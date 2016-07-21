@@ -40,6 +40,8 @@ import web_common
 import smtplib
 from email.mime.text import MIMEText
 import platform
+import tempfile
+import shutil
 
 from arsf_dem import dem_common_functions
 
@@ -202,6 +204,8 @@ def line_handler(config_file, line_name, output_location, process_main_line, pro
    #read the config
    config = ConfigParser.SafeConfigParser()
    config.read(config_file)
+   #set processing in tmp space to True
+   tmp_process = web_common.TEMP_PROCESSING
    line_details = dict(config.items(line_name))
    if output_location is None:
       output_location = line_details["output_folder"]
@@ -235,7 +239,7 @@ def line_handler(config_file, line_name, output_location, process_main_line, pro
    if process_main_line:
       if process_band_ratio:
          last_process = False
-      process_web_hyper_line(config, line_name, os.path.basename(lev1file), band_list, output_location, lev1file, hyper_delivery, input_lev1_file=None, data_type="uint16", last_process=last_process)
+      process_web_hyper_line(config, line_name, os.path.basename(lev1file), band_list, output_location, lev1file, hyper_delivery, input_lev1_file=None, data_type="uint16", last_process=last_process, tmp=tmp_process)
 
    if process_band_ratio:
       equations = [x for x in dict(config.items(line_name)) if "eq_" in x]
@@ -255,10 +259,10 @@ def line_handler(config_file, line_name, output_location, process_main_line, pro
             polite_eq_name = eq_name.replace("eq_", "")
             if enum == len(equations)-1:
                last_process = True
-            process_web_hyper_line(config, line_name, os.path.basename(bm_file), band_list, output_location, lev1file, hyper_delivery, input_lev1_file=bm_file, maskfile=bandmath_maskfile, eq_name=polite_eq_name, last_process=last_process)
+            process_web_hyper_line(config, line_name, os.path.basename(bm_file), band_list, output_location, lev1file, hyper_delivery, input_lev1_file=bm_file, maskfile=bandmath_maskfile, eq_name=polite_eq_name, last_process=last_process, tmp=tmp_process)
 
 
-def process_web_hyper_line(config, base_line_name, output_line_name, band_list, output_location, lev1file, hyper_delivery, input_lev1_file=None, skip_stages=[], maskfile=None, data_type="float32", eq_name=None, last_process=False):
+def process_web_hyper_line(config, base_line_name, output_line_name, band_list, output_location, lev1file, hyper_delivery, input_lev1_file=None, skip_stages=[], maskfile=None, data_type="float32", eq_name=None, last_process=False, tmp=False):
    """
    Main function, takes a line and processes it through APL, generates a log file for each line with the output from APL
 
@@ -329,11 +333,25 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
        status_update(status_file, "ERROR - projection not identified", output_line_name)
        raise Exception("Unable to identify projection")
 
+   #set up file locations and tmp folder if we need it
+   if tmp:
+      tempdir = tempfile.mkdtemp(prefix="ARF_WEB_")
+      masked_file = os.path.join(tempdir, output_line_name.replace(".bil","") + "_masked.bil")
+      igm_file = os.path.join(tempdir, base_line_name + ".igm")
+      mapname = os.path.join(tempdir, output_line_name + "3b_mapped.bil")
+      igm_file_transformed = igm_file.replace(".igm", "_{}.igm").format(projection.replace(' ', '_'))
+      final_masked_file = output_location + web_common.WEB_MASK_OUTPUT + output_line_name.replace(".bil","") + "_masked.bil"
+      final_igm_file = output_location + web_common.WEB_IGM_OUTPUT + base_line_name + ".igm"
+      final_igm_file_transformed = final_igm_file.replace(".igm", "_{}.igm").format(projection.replace(' ', '_'))
+      final_mapname = output_location + web_common.WEB_MAPPED_OUTPUT +output_line_name + "3b_mapped.bil"
+   else:
+      masked_file = output_location + web_common.WEB_MASK_OUTPUT + output_line_name.replace(".bil","") + "_masked.bil"
+      igm_file = output_location + web_common.WEB_IGM_OUTPUT + base_line_name + ".igm"
+      mapname = output_location + web_common.WEB_MAPPED_OUTPUT +output_line_name + "3b_mapped.bil"
+
+
    #set new status to masking
    status_update(status_file, "aplmask", output_line_name)
-
-   #create output file name
-   masked_file = output_location + web_common.WEB_MASK_OUTPUT + output_line_name.replace(".bil","") + "_masked.bil"
 
    if not "masking" in skip_stages:
       if not 'none' in line_details['masking']:
@@ -364,8 +382,7 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
 
    status_update(status_file, "aplcorr", output_line_name)
 
-   #create filenames
-   igm_file = output_location + web_common.WEB_IGM_OUTPUT + base_line_name + ".igm"
+   #get the navfile
    nav_file = glob.glob(hyper_delivery + web_common.NAVIGATION_FOLDER + base_line_name + "*_nav_post_processed.bil")[0]
 
    #aplcorr command
@@ -384,7 +401,6 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
       except Exception as e:
           status_update(status_file, "ERROR - aplcorr", output_line_name)
           logger.error([e, output_line_name])
-          #error_write(output_location, e,output_line_name)
           raise Exception(e)
 
    igm_file_transformed = igm_file.replace(".igm", "_{}.igm").format(projection.replace(' ', '_'))
@@ -411,7 +427,6 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
    except Exception as e:
       status_update(status_file, "ERROR - apltran", output_line_name)
       logger.error([e,output_line_name])
-      #error_write(output_location, e,output_line_name)
       raise Exception(e)
 
    status_update(status_file, "aplmap", output_line_name)
@@ -419,7 +434,6 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
    #set pixel size and map name
    pixelx, pixely = line_details["pixelsize"].split(" ")
 
-   mapname = output_location + web_common.WEB_MAPPED_OUTPUT +output_line_name + "3b_mapped.bil"
 
    aplmap_cmd = ["aplmap"]
    aplmap_cmd.extend(["-igm", igm_file_transformed])
@@ -440,7 +454,6 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
    except Exception as e:
       status_update(status_file, "ERROR - aplmap", output_line_name)
       logger.error([e,output_line_name])
-      ##error_write(output_location, e,output_line_name)
       raise Exception(e)
 
    status_update(status_file, "waiting to zip", output_line_name)
@@ -471,8 +484,18 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
       zip_created = False
 
    if zip_created:
-      #we need to delete the resultant file
+      #we need to delete the resultant file and hdr to save space
       os.remove(mapname)
+      os.remove(mapname + ".hdr")
+
+   if tmp:
+      shutil.move(masked_file, final_masked_file)
+      shutil.move(masked_file + ".hdr", final_masked_file + ".hdr")
+      shutil.move(igm_file, final_igm_file)
+      shutil.move(igm_file+ ".hdr", final_igm_file + ".hdr")
+      shutil.move(igm_file_transformed, final_igm_file_transformed)
+      shutil.move(igm_file_transformed+ ".hdr", final_igm_file_transformed + ".hdr")
+      shutil.move(mapname + ".zip", final_mapname + ".zip")
 
 
    logger.info(str("zipped " + output_line_name + " to " + mapname + ".zip" + " at " + output_location))

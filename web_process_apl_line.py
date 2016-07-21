@@ -459,14 +459,23 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
 
    status_update(status_file, "zipping", output_line_name)
 
-   with zipfile.ZipFile(mapname + ".zip", 'w', zipfile.ZIP_DEFLATED, allowZip64=True) as zip:
-      #compress the mapped file
-      zip.write(mapname, os.path.basename(mapname))
-      zip.write(mapname + ".hdr", os.path.basename(mapname + ".hdr"))
-      zip.close()
+   zip_created=False
+   try:
+      with zipfile.ZipFile(mapname + ".zip", 'w', zipfile.ZIP_DEFLATED, allowZip64=True) as zip:
+         #compress the mapped file
+         zip.write(mapname, os.path.basename(mapname))
+         zip.write(mapname + ".hdr", os.path.basename(mapname + ".hdr"))
+         zip.close()
+         zip_created = True
+   except:
+      zip_created = False
+
+   if zip_created:
+      #we need to delete the resultant file
+      os.remove(mapname)
+
 
    logger.info(str("zipped " + output_line_name + " to " + mapname + ".zip" + " at " + output_location))
-   #logger("zipped to " + mapname + ".zip", line_name, output_location)
 
    status_update(status_file, "complete", output_line_name)
 

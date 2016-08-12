@@ -102,7 +102,7 @@ def web_qsub(config, local=False, output=None):
       logger.info("not processing due to pre proc errors, inspect earlier in this log to see reason")
       exit(0)
 
-
+   new_location = False
    #if the output location doesn't exist yet we should create one
    if output is None or output == '':
       try:
@@ -116,6 +116,7 @@ def web_qsub(config, local=False, output=None):
             sortie=''
          output_location = web_structure(defaults["project_code"], defaults["julianday"], defaults["year"],
                            sortie)
+         new_location = True
          config_file.set('DEFAULT', 'output_folder', output_location)
    else:
       output_location = output
@@ -206,7 +207,7 @@ def web_qsub(config, local=False, output=None):
                   open(bm_log_file, mode="a").close()
 
    print "test1"
-   if not config_file.getboolean('DEFAULT', 'status_email_sent'):
+   if (not config_file.getboolean('DEFAULT', 'status_email_sent')) or (new_location):
       print "test2"
       web_process_apl_line.email_status(defaults["email"], output_location, defaults["project_code"])
       config_file.set('DEFAULT', "status_email_sent", "True")
@@ -242,6 +243,7 @@ def web_qsub(config, local=False, output=None):
             qsub_args.extend(["-N", "WEB_" + defaults["project_code"] + "_" + line])
             qsub_args.extend(["-q", web_common.QUEUE])
             qsub_args.extend(["-P", "arsfdan"])
+            qsub_args.extend(["-p",0])
             qsub_args.extend(["-wd", web_common.WEB_OUTPUT])
             qsub_args.extend(["-e", web_common.QSUB_LOG_DIR])
             qsub_args.extend(["-o", web_common.QSUB_LOG_DIR])

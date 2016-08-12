@@ -488,13 +488,17 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
       os.remove(mapname)
       os.remove(mapname + ".hdr")
 
+   logger.info("Beginning final zipfile copy")
+
    if tmp:
-      shutil.move(masked_file, final_masked_file)
-      shutil.move(masked_file + ".hdr", final_masked_file + ".hdr")
-      shutil.move(igm_file, final_igm_file)
-      shutil.move(igm_file+ ".hdr", final_igm_file + ".hdr")
-      shutil.move(igm_file_transformed, final_igm_file_transformed)
-      shutil.move(igm_file_transformed+ ".hdr", final_igm_file_transformed + ".hdr")
+      if web_common.DEBUG_FILE_WRITEBACK:
+         logger.info("debug writeback requested, copy time will be increased!")
+         shutil.move(masked_file, final_masked_file)
+         shutil.move(masked_file + ".hdr", final_masked_file + ".hdr")
+         shutil.move(igm_file, final_igm_file)
+         shutil.move(igm_file+ ".hdr", final_igm_file + ".hdr")
+         shutil.move(igm_file_transformed, final_igm_file_transformed)
+         shutil.move(igm_file_transformed+ ".hdr", final_igm_file_transformed + ".hdr")
       shutil.move(mapname + ".zip", final_mapname + ".zip")
 
 
@@ -520,7 +524,7 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
          zip_contents_file.close()
          logger.info("outputting master zip")
          with zipfile.ZipFile(output_location + web_common.WEB_MAPPED_OUTPUT + line_details["project_code"] + '_' + line_details[
-            "year"] + jday + '.zip', 'a', zipfile.ZIP_DEFLATED, allowZip64=True) as zip:
+            "year"] + jday + '.zip', 'a', zipfile.ZIP_STORED, allowZip64=True) as zip:
             for zip_mapped in zip_mapped_folder:
                logger.info("zipping " + zip_mapped)
                zip.write(zip_mapped, line_details["project_code"] + '_' + line_details["year"] + jday + "/" + os.path.basename(zip_mapped))

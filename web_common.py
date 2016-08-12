@@ -105,3 +105,6 @@ ERROR_EMAIL = "stgo@pml.ac.uk"
 
 #whether to process on local file system of gridnodes
 TEMP_PROCESSING = True
+
+#If true forces all processing files to be written back to the workspace dirs
+DEBUG_FILE_WRITEBACK = False

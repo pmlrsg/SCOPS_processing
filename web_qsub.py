@@ -34,6 +34,7 @@ import logging
 import subprocess
 import web_process_apl_line
 import web_common
+import web_job_submission
 
 from arsf_dem import dem_common_functions
 
@@ -73,7 +74,7 @@ def web_structure(project_code, jday, year, sortie=None, output_name=None):
    return folder_base
 
 
-def web_qsub(config, local=False, output=None):
+def web_qsub(config, job_submission_system="local", output=None):
    """
    Submits the job (or processes locally in its current form)
 
@@ -218,6 +219,12 @@ def web_qsub(config, local=False, output=None):
    except Exception as e:
       filesizes = None
 
+   # Set up job submission system
+   if job_submission_system == "local":
+      job_obj = web_job_submission.LocalJobSubmission(logger, defaults)
+   elif job_submission_system == "qsub":
+      job_obj = web_job_submission.QsubJobSubmission(logger, defaults)
+
    for line in lines:
       band_ratio = False
       main_line = False
@@ -229,62 +236,9 @@ def web_qsub(config, local=False, output=None):
          # if they want the band ratiod file we should submit it
          band_ratio = True
 
-      if main_line or band_ratio:
-         if local:
-            try:
-               logger.info("processing line {}".format(line))
-               web_process_apl_line.line_handler(config, line, output_location, main_line, band_ratio)
-            except Exception as e:
-               logger.error("Could not process job for {}, Reason: {}".format(line, e))
-         else:
-            #this will need to be updated to whatever parallel jobs system is
-            #being used in the intended use environemnt
-            qsub_args = ["qsub"]
-            qsub_args.extend(["-N", "WEB_" + defaults["project_code"] + "_" + line])
-            qsub_args.extend(["-q", web_common.QUEUE])
-            qsub_args.extend(["-P", "arsfdan"])
-            qsub_args.extend(["-p",0])
-            qsub_args.extend(["-wd", web_common.WEB_OUTPUT])
-            qsub_args.extend(["-e", web_common.QSUB_LOG_DIR])
-            qsub_args.extend(["-o", web_common.QSUB_LOG_DIR])
-            qsub_args.extend(["-m", "n"]) # Don't send mail
-            qsub_args.extend(["-b", "y"])
-            qsub_args.extend(["-l", "apl_throttle=1"])
-            qsub_args.extend(["-l", "apl_web_throttle=1"])
-            try:
-               if not filesizes is None:
-                  filesize = int([x for x in filesizes if line in x][0].split(",")[1].replace("G\n", ""))
-                  filesize += filesize * 0.5
-               else:
-                  #we couldnt find a filesize - default to 100GB
-                  filesize = 100
-            except Exception as e:
-               #something went wrong so we should default to 100GB
-               filesize = 100
-            qsub_args.extend(["-l", "tmpfree={}".format(filesize)])
-            script_args = [web_common.PROCESS_COMMAND]
-            script_args.extend(["-l", line])
-            script_args.extend(["-c", config])
-            script_args.extend(["-s","fenix"])
-            script_args.extend(["-o", output_location])
-            if main_line:
-               script_args.extend(["-m"])
-            if band_ratio:
-               script_args.extend(["-b"])
-
-            qsub_args.extend(script_args)
-            try:
-               logger.info("submitting line {}".format(line))
-               logger.info("qsub command: {}".format(" ".join(qsub_args)))
-               qsub = subprocess.Popen(qsub_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-               out, err = qsub.communicate()
-               logger.info(out)
-               if err:
-                  logger.error(err)
-            except:
-               logger.error("Could not submit qsub job. Reason: " + str(sys.exc_info()[1]))
-               continue
-            logger.info("line submitted: " + line)
+      # Submit job
+      job_obj.submit(config, line, output_location, filesizes,
+                     main_line, band_ratio)
 
    logger.info("all lines complete")
 
@@ -310,4 +264,10 @@ if __name__ == '__main__':
                        metavar="<folder_name>")
    args = parser.parse_args()
 
-   web_qsub(args.config, local=args.local, output=args.output)
+   if args.local:
+      submission_system = 'local'
+   else:
+      submission_system = 'qsub'
+
+   web_qsub(args.config, job_submission_system=submission_system,
+            output=args.output)

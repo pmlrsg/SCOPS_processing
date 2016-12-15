@@ -10,6 +10,10 @@ Contains main config variables for the processor chain, these are paths to
 executables and default preformat strings. In future this will try to autodetect
 best settings but for the moment will just act as a lazy config file until I have
 time to update it
+
+All variables can be overwritten from their default value by setting an
+environmental variables of the same name.
+
 """
 import os
 
@@ -100,17 +104,34 @@ QSUB_PROJECT = "arsfdan"
 QSUB_WALL_TIME = "12:00"
 
 #sender of all emails
-SEND_EMAIL = "arsf-processing@pml.ac.uk"
+SEND_EMAIL = "nerc-arf-processing@pml.ac.uk"
 
 #email to bcc anything sent to
-BCC_EMAIL = "arsf-code@pml.ac.uk"
+BCC_EMAIL = "nerc-arf-code@pml.ac.uk"
 
 #address errors will be sent to
-#TODO change from stgo!
-ERROR_EMAIL = "stgo@pml.ac.uk"
+ERROR_EMAIL = "nerc-arf-code@pml.ac.uk"
 
 #whether to process on local file system of gridnodes
 TEMP_PROCESSING = True
 
 #If true forces all processing files to be written back to the workspace dirs
 DEBUG_FILE_WRITEBACK = False
+
+# Now go through all variables and check if they should be overwritten
+# by an environmental variable of the same name.
+for env_var in dir():
+   # Only check for all upper case variable names.
+   if env_var.upper() == env_var:
+      env_var_value = None
+      # See if an environmental variable has been set with the same
+      # name
+      try:
+         env_var_value = os.environ[env_var]
+      except KeyError:
+         pass
+      # If environmental variable has been set overwrite default
+      # value
+      if env_var_value is not None:
+         locals()[env_var] = env_var_value
+

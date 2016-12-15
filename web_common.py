@@ -93,6 +93,12 @@ QSUB_COMMAND = os.path.abspath(os.path.join(__file__, os.pardir)) + '/' + 'web_q
 #The main queue to be submitted to
 QUEUE = "arsf.q"
 
+#Project to submit job to
+QSUB_PROJECT = "arsfdan"
+
+#Project wall time
+QSUB_WALL_TIME = "12:00"
+
 #sender of all emails
 SEND_EMAIL = "arsf-processing@pml.ac.uk"
 

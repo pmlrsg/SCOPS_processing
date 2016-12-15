@@ -51,6 +51,10 @@ LOG_DIR = "/logs/"
 #navigation files folder in the hyperspectral delivery
 NAVIGATION_FOLDER = "/flightlines/navigation/"
 
+#delivery folder for hyperspectral within project
+#can use wildcards.
+HYPER_DELIVERY_FOLDER = "/delivery/*hyperspectral*/"
+
 #core processing output location, workspaces are spawned here
 WEB_OUTPUT = "/users/rsg/arsf/web_processing/processing/"
 
@@ -112,6 +116,9 @@ BCC_EMAIL = "nerc-arf-code@pml.ac.uk"
 #address errors will be sent to
 ERROR_EMAIL = "nerc-arf-code@pml.ac.uk"
 
+#directory for temporary files
+TEMP_PROCESSING_DIR = "/tmp"
+
 #whether to process on local file system of gridnodes
 TEMP_PROCESSING = True
 
@@ -134,4 +141,11 @@ for env_var in dir():
       # value
       if env_var_value is not None:
          locals()[env_var] = env_var_value
+
+# Check for the temp processing directory. If it has been set to
+# an empty string assume TEMP_PROCESSING isn't required.
+
+if TEMP_PROCESSING_DIR == "":
+   #whether to process on local file system of gridnodes
+   TEMP_PROCESSING = False
 

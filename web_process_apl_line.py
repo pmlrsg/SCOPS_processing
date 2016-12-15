@@ -29,7 +29,6 @@ if sys.version_info[0] < 3:
    import ConfigParser
 else:
    import configparser as ConfigParser
-import folder_structure
 import glob
 import zipfile
 import pipes
@@ -201,6 +200,8 @@ def line_handler(config_file, line_name, output_location, process_main_line, pro
    :param process_main_line:
    :param process_band_ratio:
    """
+   if not os.path.isfile(config_file):
+      raise IOError("Config file not found. Check {} is a valid file".format(config_file))
    #read the config
    config = ConfigParser.SafeConfigParser()
    config.read(config_file)
@@ -228,7 +229,11 @@ def line_handler(config_file, line_name, output_location, process_main_line, pro
    if sortie == "None":
       sortie = ''
    folder = line_details['sourcefolder']
-   hyper_delivery = glob.glob(folder + "/delivery/*hyperspectral*/")[0]
+   try:
+      hyper_delivery = glob.glob(folder + web_common.HYPER_DELIVERY_FOLDER)[0]
+   except IndexError:
+      raise Exception("Could not find hyperspectral delivery folder. Tried "
+                      "'{}'".format(folder + web_common.HYPER_DELIVERY_FOLDER))
 
    #wildcard in the middle to make sure line number doesn't muck things up
    lev1file=glob.glob(hyper_delivery + '/' + web_common.LEV1_FOLDER + '/' + line_name +'1b.bil')[0]
@@ -335,7 +340,7 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
 
    #set up file locations and tmp folder if we need it
    if tmp:
-      tempdir = tempfile.mkdtemp(prefix="ARF_WEB_")
+      tempdir = tempfile.mkdtemp(prefix="ARF_WEB_", dir=web_common.TEMP_PROCESSING_DIR)
       masked_file = os.path.join(tempdir, output_line_name.replace(".bil","") + "_masked.bil")
       igm_file = os.path.join(tempdir, base_line_name + ".igm")
       mapname = os.path.join(tempdir, output_line_name + "3b_mapped.bil")

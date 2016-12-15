@@ -322,6 +322,11 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
    if input_lev1_file is None:
       input_lev1_file = lev1file
 
+   #check if we want to ignore free disk space when running aplmap
+   #(for filesystems which don't report free space correctly)
+   aplmap_ignore_freespace = config.getboolean(base_line_name,
+                                               "aplmap_ignore_freespace")
+
    projection = line_details["projection"]
 
    #set up projection strings
@@ -450,7 +455,8 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
    aplmap_cmd.extend(["-buffersize", str(4096)])
    aplmap_cmd.extend(["-outputlevel", "verbose"])
    aplmap_cmd.extend(["-outputdatatype", data_type])
-
+   if aplmap_ignore_freespace:
+      aplmap_cmd.extend(["-ignorediskspace"])
 
    try:
       log = dem_common_functions.CallSubprocessOn(aplmap_cmd, redirect=False, logger=logger)

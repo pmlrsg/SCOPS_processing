@@ -20,7 +20,6 @@ the grid. Uses web_process_apl_line.py
 """
 
 import os
-import folder_structure
 import datetime
 import sys
 if sys.version_info[0] < 3:
@@ -129,16 +128,28 @@ def web_qsub(config, job_submission_system="local", output=None):
    sortie=defaults["sortie"]
    if sortie == "None":
       sortie=''
-   #find out where the files are for the day we are trying to process
-   folder = folder_structure.FolderStructure(year=defaults["year"],
-                                             jday=defaults["julianday"],
-                                             projectCode=defaults["project_code"],
-                                             fletter=sortie,
-                                             absolute=True)
+
+   sourcefolder = None
+
+   try:
+      sourcefolder = defaults["sourcefolder"]
+   except KeyError:
+      pass
+
+   if sourcefolder is None:
+      import folder_structure
+      #find out where the files are for the day we are trying to process
+      folder = folder_structure.FolderStructure(year=defaults["year"],
+                                                jday=defaults["julianday"],
+                                                projectCode=defaults["project_code"],
+                                                fletter=sortie,
+                                                absolute=True)
+      sourcefolder = folder.getProjPath()
 
    #locate delivery and navigation files
-   hyper_delivery = glob.glob(folder.getProjPath() + "/delivery/*hyperspectral*/")[0]
-   nav_folder = glob.glob(hyper_delivery + "flightlines/navigation/")[0]
+   hyper_delivery = glob.glob(sourcefolder + web_common.HYPER_DELIVERY_FOLDER)[0]
+   nav_folder = glob.glob(os.path.join(hyper_delivery,
+                                       "flightlines/navigation/"))[0]
 
    #if the dem doesn't exist generate one
    try:
@@ -207,9 +218,7 @@ def web_qsub(config, job_submission_system="local", output=None):
                   open(bm_status_file, 'w+').write("{} = {}".format((line + equation.replace("eq_", "_")), "waiting"))
                   open(bm_log_file, mode="a").close()
 
-   print "test1"
    if (not config_file.getboolean('DEFAULT', 'status_email_sent')) or (new_location):
-      print "test2"
       web_process_apl_line.email_status(defaults["email"], output_location, defaults["project_code"])
       config_file.set('DEFAULT', "status_email_sent", "True")
       config_file.write(open(config, 'w'))
@@ -224,6 +233,11 @@ def web_qsub(config, job_submission_system="local", output=None):
       job_obj = web_job_submission.LocalJobSubmission(logger, defaults)
    elif job_submission_system == "qsub":
       job_obj = web_job_submission.QsubJobSubmission(logger, defaults)
+   elif job_submission_system == "bsub":
+      job_obj = web_job_submission.BsubJobSubmission(logger, defaults)
+   else:
+      raise Exception("Queue submission system '{}' not implemented"
+                      "".format(job_submission_system))
 
    for line in lines:
       band_ratio = False
@@ -267,7 +281,7 @@ if __name__ == '__main__':
    if args.local:
       submission_system = 'local'
    else:
-      submission_system = 'qsub'
+      submission_system = web_common.QSUB_SYSTEM
 
    web_qsub(args.config, job_submission_system=submission_system,
             output=args.output)

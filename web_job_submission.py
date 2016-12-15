@@ -65,7 +65,7 @@ class QsubJobSubmission(JobSubmission):
       qsub_args.extend(["-N", "WEB_" + self.defaults["project_code"] + "_" + line])
       qsub_args.extend(["-q", web_common.QUEUE])
       qsub_args.extend(["-P", web_common.QSUB_PROJECT])
-      qsub_args.extend(["-p",0])
+      qsub_args.extend(["-p","0"])
       qsub_args.extend(["-wd", web_common.WEB_OUTPUT])
       qsub_args.extend(["-e", web_common.QSUB_LOG_DIR])
       qsub_args.extend(["-o", web_common.QSUB_LOG_DIR])
@@ -108,6 +108,7 @@ class QsubJobSubmission(JobSubmission):
          if main_line or band_ratio:
             self.logger.info("line submitted: " + line)
       except Exception as e:
+         raise
          self.logger.error("Could not submit qsub job. Reason: {}".format(e))
 
    def get_name(self):

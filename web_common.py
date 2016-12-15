@@ -95,7 +95,10 @@ STATUS_FILE = "{}/" + STATUS_DIR + "/{}_status.txt"
 #where the view vectors can be found
 VIEW_VECTOR_FILE = "/sensor_FOV_vectors/{}_fov_fullccd_vectors.bil"
 
-#location of the main qsub command
+#default queue system
+QSUB_SYSTEM = "qsub"
+
+#location of command to submit to queue
 QSUB_COMMAND = os.path.abspath(os.path.join(__file__, os.pardir)) + '/' + 'web_qsub.py'
 
 #The main queue to be submitted to

@@ -123,11 +123,13 @@ class BsubJobSubmission(JobSubmission):
 
       job_name = "WEB_" + self.defaults["project_code"] + "_" + line
       qsub_args = ["bsub"]
-      qsub_args.extend(["-N", job_name])
+      qsub_args.extend(["-J", job_name])
       qsub_args.extend(["-q", web_common.QUEUE])
-      qsub_args.extend(["-e", os.path.join(web_common.QSUB_LOG_DIR, job_name)])
-      qsub_args.extend(["-o", os.path.join(web_common.QSUB_LOG_DIR, job_name)])
-      qsub_args.extend(["-W", web_common.QSUB_LOG_DIR])
+      qsub_args.extend(["-o", "{}_%J.o".format(os.path.join(web_common.QSUB_LOG_DIR, job_name))])
+      qsub_args.extend(["-e", "{}_%J.e".format(os.path.join(web_common.QSUB_LOG_DIR, job_name))])
+      qsub_args.extend(["-W", web_common.QSUB_WALL_TIME])
+      qsub_args.extend(["-n", "1"])
+
       script_args = [web_common.PROCESS_COMMAND]
       script_args.extend(["-l", line])
       script_args.extend(["-c", config])
@@ -138,12 +140,18 @@ class BsubJobSubmission(JobSubmission):
       if band_ratio:
          script_args.extend(["-b"])
 
-      qsub_args.extend(script_args)
       try:
          self.logger.info("submitting line {}".format(line))
          self.logger.info("qsub command: {}".format(" ".join(qsub_args)))
-         qsub = subprocess.Popen(qsub_args, stdout=subprocess.PIPE,
+         self.logger.info("script command: {}".format(" ".join(script_args)))
+         #bsub gets the input from stdin, normally used with a script and
+         #redirect (<). For subprocess need to write the command to stdin
+         #and pass this in.
+         qsub = subprocess.Popen(qsub_args,
+                                 stdin=subprocess.PIPE,
+                                 stdout=subprocess.PIPE,
                                  stderr=subprocess.PIPE)
+         qsub.stdin.write(" ".join(script_args))
          out, err = qsub.communicate()
          self.logger.info(out)
          if err:

@@ -137,7 +137,12 @@ def web_qsub(config, job_submission_system="local", output=None):
       pass
 
    if sourcefolder is None:
-      import folder_structure
+      try:
+         import folder_structure
+      except ImportError:
+         raise ImportError("Source folder was not specified and folder_structure"
+                           ", which provides details for the PML system, could"
+                           " not be imported")
       #find out where the files are for the day we are trying to process
       folder = folder_structure.FolderStructure(year=defaults["year"],
                                                 jday=defaults["julianday"],

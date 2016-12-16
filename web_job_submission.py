@@ -145,14 +145,12 @@ class BsubJobSubmission(JobSubmission):
          self.logger.info("qsub command: {}".format(" ".join(qsub_args)))
          self.logger.info("script command: {}".format(" ".join(script_args)))
          #bsub gets the input from stdin, normally used with a script and
-         #redirect (<). For subprocess need to write the command to stdin
-         #and pass this in.
+         #redirect (<). For subprocess need to pass in input to communicate
          qsub = subprocess.Popen(qsub_args,
                                  stdin=subprocess.PIPE,
                                  stdout=subprocess.PIPE,
                                  stderr=subprocess.PIPE)
-         qsub.stdin.write(" ".join(script_args))
-         out, err = qsub.communicate()
+         out, err = qsub.communicate(input=" ".join(script_args))
          self.logger.info(out)
          if err:
             self.logger.error(err)

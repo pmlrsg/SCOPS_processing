@@ -324,8 +324,11 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
 
    #check if we want to ignore free disk space when running aplmap
    #(for filesystems which don't report free space correctly)
-   aplmap_ignore_freespace = config.getboolean(base_line_name,
+   try:
+      aplmap_ignore_freespace = config.getboolean(base_line_name,
                                                "aplmap_ignore_freespace")
+   except ConfigParser.NoOptionError:
+      aplmap_ignore_freespace = False
 
    projection = line_details["projection"]
 

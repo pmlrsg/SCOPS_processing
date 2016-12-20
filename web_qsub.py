@@ -241,7 +241,7 @@ def web_qsub(config, job_submission_system="local", output=None):
    elif job_submission_system == "bsub":
       job_obj = web_job_submission.BsubJobSubmission(logger, defaults)
    else:
-      raise Exception("Queue submission system '{}' not implemented"
+      raise NotImplementedError("Queue submission system '{}' not implemented"
                       "".format(job_submission_system))
 
    for line in lines:

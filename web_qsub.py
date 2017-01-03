@@ -20,7 +20,6 @@ the grid. Uses web_process_apl_line.py
 """
 
 import os
-import folder_structure
 import datetime
 import sys
 if sys.version_info[0] < 3:
@@ -34,6 +33,7 @@ import logging
 import subprocess
 import web_process_apl_line
 import web_common
+import web_job_submission
 
 from arsf_dem import dem_common_functions
 
@@ -73,7 +73,7 @@ def web_structure(project_code, jday, year, sortie=None, output_name=None):
    return folder_base
 
 
-def web_qsub(config, local=False, output=None):
+def web_qsub(config, job_submission_system="local", output=None):
    """
    Submits the job (or processes locally in its current form)
 
@@ -128,16 +128,33 @@ def web_qsub(config, local=False, output=None):
    sortie=defaults["sortie"]
    if sortie == "None":
       sortie=''
-   #find out where the files are for the day we are trying to process
-   folder = folder_structure.FolderStructure(year=defaults["year"],
-                                             jday=defaults["julianday"],
-                                             projectCode=defaults["project_code"],
-                                             fletter=sortie,
-                                             absolute=True)
+
+   sourcefolder = None
+
+   try:
+      sourcefolder = defaults["sourcefolder"]
+   except KeyError:
+      pass
+
+   if sourcefolder is None:
+      try:
+         import folder_structure
+      except ImportError:
+         raise ImportError("Source folder was not specified and folder_structure"
+                           ", which provides details for the PML system, could"
+                           " not be imported")
+      #find out where the files are for the day we are trying to process
+      folder = folder_structure.FolderStructure(year=defaults["year"],
+                                                jday=defaults["julianday"],
+                                                projectCode=defaults["project_code"],
+                                                fletter=sortie,
+                                                absolute=True)
+      sourcefolder = folder.getProjPath()
 
    #locate delivery and navigation files
-   hyper_delivery = glob.glob(folder.getProjPath() + "/delivery/*hyperspectral*/")[0]
-   nav_folder = glob.glob(hyper_delivery + "flightlines/navigation/")[0]
+   hyper_delivery = glob.glob(sourcefolder + web_common.HYPER_DELIVERY_FOLDER)[0]
+   nav_folder = glob.glob(os.path.join(hyper_delivery,
+                                       "flightlines/navigation/"))[0]
 
    #if the dem doesn't exist generate one
    try:
@@ -206,9 +223,7 @@ def web_qsub(config, local=False, output=None):
                   open(bm_status_file, 'w+').write("{} = {}".format((line + equation.replace("eq_", "_")), "waiting"))
                   open(bm_log_file, mode="a").close()
 
-   print "test1"
    if (not config_file.getboolean('DEFAULT', 'status_email_sent')) or (new_location):
-      print "test2"
       web_process_apl_line.email_status(defaults["email"], output_location, defaults["project_code"])
       config_file.set('DEFAULT', "status_email_sent", "True")
       config_file.write(open(config, 'w'))
@@ -217,6 +232,17 @@ def web_qsub(config, local=False, output=None):
       filesizes = list(open(glob.glob(hyper_delivery + "/flightlines/mapped/unzipped_filesize.csv")[0]))
    except Exception as e:
       filesizes = None
+
+   # Set up job submission system
+   if job_submission_system == "local":
+      job_obj = web_job_submission.LocalJobSubmission(logger, defaults)
+   elif job_submission_system == "qsub":
+      job_obj = web_job_submission.QsubJobSubmission(logger, defaults)
+   elif job_submission_system == "bsub":
+      job_obj = web_job_submission.BsubJobSubmission(logger, defaults)
+   else:
+      raise NotImplementedError("Queue submission system '{}' not implemented"
+                      "".format(job_submission_system))
 
    for line in lines:
       band_ratio = False
@@ -229,62 +255,9 @@ def web_qsub(config, local=False, output=None):
          # if they want the band ratiod file we should submit it
          band_ratio = True
 
-      if main_line or band_ratio:
-         if local:
-            try:
-               logger.info("processing line {}".format(line))
-               web_process_apl_line.line_handler(config, line, output_location, main_line, band_ratio)
-            except Exception as e:
-               logger.error("Could not process job for {}, Reason: {}".format(line, e))
-         else:
-            #this will need to be updated to whatever parallel jobs system is
-            #being used in the intended use environemnt
-            qsub_args = ["qsub"]
-            qsub_args.extend(["-N", "WEB_" + defaults["project_code"] + "_" + line])
-            qsub_args.extend(["-q", web_common.QUEUE])
-            qsub_args.extend(["-P", "arsfdan"])
-            qsub_args.extend(["-p",0])
-            qsub_args.extend(["-wd", web_common.WEB_OUTPUT])
-            qsub_args.extend(["-e", web_common.QSUB_LOG_DIR])
-            qsub_args.extend(["-o", web_common.QSUB_LOG_DIR])
-            qsub_args.extend(["-m", "n"]) # Don't send mail
-            qsub_args.extend(["-b", "y"])
-            qsub_args.extend(["-l", "apl_throttle=1"])
-            qsub_args.extend(["-l", "apl_web_throttle=1"])
-            try:
-               if not filesizes is None:
-                  filesize = int([x for x in filesizes if line in x][0].split(",")[1].replace("G\n", ""))
-                  filesize += filesize * 0.5
-               else:
-                  #we couldnt find a filesize - default to 100GB
-                  filesize = 100
-            except Exception as e:
-               #something went wrong so we should default to 100GB
-               filesize = 100
-            qsub_args.extend(["-l", "tmpfree={}".format(filesize)])
-            script_args = [web_common.PROCESS_COMMAND]
-            script_args.extend(["-l", line])
-            script_args.extend(["-c", config])
-            script_args.extend(["-s","fenix"])
-            script_args.extend(["-o", output_location])
-            if main_line:
-               script_args.extend(["-m"])
-            if band_ratio:
-               script_args.extend(["-b"])
-
-            qsub_args.extend(script_args)
-            try:
-               logger.info("submitting line {}".format(line))
-               logger.info("qsub command: {}".format(" ".join(qsub_args)))
-               qsub = subprocess.Popen(qsub_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-               out, err = qsub.communicate()
-               logger.info(out)
-               if err:
-                  logger.error(err)
-            except:
-               logger.error("Could not submit qsub job. Reason: " + str(sys.exc_info()[1]))
-               continue
-            logger.info("line submitted: " + line)
+      # Submit job
+      job_obj.submit(config, line, output_location, filesizes,
+                     main_line, band_ratio)
 
    logger.info("all lines complete")
 
@@ -310,4 +283,10 @@ if __name__ == '__main__':
                        metavar="<folder_name>")
    args = parser.parse_args()
 
-   web_qsub(args.config, local=args.local, output=args.output)
+   if args.local:
+      submission_system = 'local'
+   else:
+      submission_system = web_common.QSUB_SYSTEM
+
+   web_qsub(args.config, job_submission_system=submission_system,
+            output=args.output)

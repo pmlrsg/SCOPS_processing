@@ -10,6 +10,10 @@ Contains main config variables for the processor chain, these are paths to
 executables and default preformat strings. In future this will try to autodetect
 best settings but for the moment will just act as a lazy config file until I have
 time to update it
+
+All variables can be overwritten from their default value by setting an
+environmental variables of the same name.
+
 """
 import os
 
@@ -46,6 +50,10 @@ LOG_DIR = "/logs/"
 
 #navigation files folder in the hyperspectral delivery
 NAVIGATION_FOLDER = "/flightlines/navigation/"
+
+#delivery folder for hyperspectral within project
+#can use wildcards.
+HYPER_DELIVERY_FOLDER = "/delivery/*hyperspectral*/"
 
 #core processing output location, workspaces are spawned here
 WEB_OUTPUT = "/users/rsg/arsf/web_processing/processing/"
@@ -87,24 +95,60 @@ STATUS_FILE = "{}/" + STATUS_DIR + "/{}_status.txt"
 #where the view vectors can be found
 VIEW_VECTOR_FILE = "/sensor_FOV_vectors/{}_fov_fullccd_vectors.bil"
 
-#location of the main qsub command
+#default queue system
+QSUB_SYSTEM = "qsub"
+
+#location of command to submit to queue
 QSUB_COMMAND = os.path.abspath(os.path.join(__file__, os.pardir)) + '/' + 'web_qsub.py'
 
 #The main queue to be submitted to
 QUEUE = "arsf.q"
 
+#Project to submit job to
+QSUB_PROJECT = "arsfdan"
+
+#Project wall time
+QSUB_WALL_TIME = "12:00"
+
 #sender of all emails
-SEND_EMAIL = "arsf-processing@pml.ac.uk"
+SEND_EMAIL = "nerc-arf-processing@pml.ac.uk"
 
 #email to bcc anything sent to
-BCC_EMAIL = "arsf-code@pml.ac.uk"
+BCC_EMAIL = "nerc-arf-code@pml.ac.uk"
 
 #address errors will be sent to
-#TODO change from stgo!
-ERROR_EMAIL = "stgo@pml.ac.uk"
+ERROR_EMAIL = "nerc-arf-code@pml.ac.uk"
+
+#directory for temporary files
+TEMP_PROCESSING_DIR = "/tmp"
 
 #whether to process on local file system of gridnodes
 TEMP_PROCESSING = True
 
 #If true forces all processing files to be written back to the workspace dirs
 DEBUG_FILE_WRITEBACK = False
+
+# Now go through all variables and check if they should be overwritten
+# by an environmental variable of the same name.
+for env_var in dir():
+   # Only check for all upper case variable names.
+   if env_var.upper() == env_var:
+      env_var_value = None
+      # See if an environmental variable has been set with the same
+      # name
+      try:
+         env_var_value = os.environ[env_var]
+      except KeyError:
+         pass
+      # If environmental variable has been set overwrite default
+      # value
+      if env_var_value is not None:
+         locals()[env_var] = env_var_value
+
+# Check for the temp processing directory. If it has been set to
+# an empty string assume TEMP_PROCESSING isn't required.
+
+if TEMP_PROCESSING_DIR == "":
+   #whether to process on local file system of gridnodes
+   TEMP_PROCESSING = False
+

@@ -24,7 +24,7 @@ COMMON_LOCATION = os.path.dirname(os.path.realpath(__file__))
 FORCE_LOCAL = False
 
 #the location of the main processing executable
-PROCESS_COMMAND = COMMON_LOCATION + "/web_process_apl_line.py"
+PROCESS_COMMAND = COMMON_LOCATION + "/scops_process_apl_line.py"
 
 #the following are output folders, they shouldn't need to be changed and will all exist under the main processing folder
 #mask output location
@@ -99,7 +99,7 @@ VIEW_VECTOR_FILE = "/sensor_FOV_vectors/{}_fov_fullccd_vectors.bil"
 QSUB_SYSTEM = "qsub"
 
 #location of command to submit to queue
-QSUB_COMMAND = os.path.abspath(os.path.join(__file__, os.pardir)) + '/' + 'web_qsub.py'
+QSUB_COMMAND = os.path.abspath(os.path.join(__file__, os.pardir)) + '/' + 'scops_qsub.py'
 
 #The main queue to be submitted to
 QUEUE = "arsf.q"

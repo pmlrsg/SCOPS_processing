@@ -20,7 +20,8 @@ if sys.version_info[0] < 3:
 else:
    import configparser as ConfigParser
 import os
-import web_common
+
+from scops import scops_common
 
 from arsf_dem import dem_common_functions
 
@@ -30,14 +31,14 @@ def main():
    double submit or overlap. It should be updated to throttle it'self if a lot
    of jobs are already on the grid/being processed locally
    """
-   for configfile in os.listdir(web_common.WEB_CONFIG_DIR):
+   for configfile in os.listdir(scops_common.WEB_CONFIG_DIR):
       #assume we want to submit stuff until we find evidence to the contrary
       print configfile
       if ".cfg" not in configfile[-4:]:
          continue
       submit = True
       config = ConfigParser.SafeConfigParser()
-      config.read(web_common.WEB_CONFIG_DIR + "/" + configfile)
+      config.read(scops_common.WEB_CONFIG_DIR + "/" + configfile)
 
       if config.has_option("DEFAULT", "ftp_dem"):
          if config.getboolean("DEFAULT", "ftp_dem"):
@@ -68,10 +69,10 @@ def main():
 
       if submit:
          #finally submit the jobs
-         print web_common.QSUB_COMMAND
-         qsub = [web_common.QSUB_COMMAND]
-         qsub.extend(["-c", "{}/{}".format(web_common.WEB_CONFIG_DIR, configfile)])
-         if web_common.FORCE_LOCAL:
+         print scops_common.QSUB_COMMAND
+         qsub = [scops_common.QSUB_COMMAND]
+         qsub.extend(["-c", "{}/{}".format(scops_common.WEB_CONFIG_DIR, configfile)])
+         if scops_common.FORCE_LOCAL:
             qsub.extend(["--local"])
          dem_common_functions.CallSubprocessOn(qsub)
 

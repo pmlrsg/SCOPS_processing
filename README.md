@@ -1,69 +1,37 @@
-The web interface for PIs to submit jobs for processing at PML.
+# The Simple Concurrent Online Processing System (SCOPS) #
 
-This is built in flask python and uses bootstrap to make the css nice.
+## Installation ##
 
-THE TODO LIST
+### Pre-requsites ###
 
-To get to version 1:
+* APL (https://github.com/arsf/apl / ttps://nerc-arf-dan.pml.ac.uk/trac/wiki/Downloads/software/)
+* NERC-ARF DEM Scripts (https://github.com/pmlrsg/arsf_dem_scripts)
+* GDAL
+* NumExpr (https://github.com/pydata/numexpr)
 
-0. (make everything commented and readable)
-1. get emails sending
-    * Done
-2. get email confirmation/config updating working
-    * Done
-3. get downloads working
-    * Done
-4. get user input sanitised server side(!!)
-    * Semi done, revisiting this
-5. give an error page if the project/day does not exist
-    * Done
-6. implement basic user auth with htaccess
-    * Done
-7. Testing - user/security
-    * Done
-8. reassess this list
-    * Done
-9. make a new airborne-web user
-    * Not doing this
-10. Make the page more user guiding
-    * prevent submission with no lines
-        * Done
-    * better increments of lat long on bounds
-        * Done
-    * Interpolation explanation
-        * Done
-    * Better titling of bounding box
-        * Done
-    * Return the user to webpage if errors are identified on server side
-        * Done (ish)
-11. Add logging in both the webpage and the processing chain
-    * Done (ish)
-12. Submission page confirmation email text
-    * Done
-13. confirmation email text revisit
-    * Done
-14. find out why username only in email box is acceptable
-    * It isn't accepted any more
-15. make "preset with optimum values" bold
-    * Done
-16. scroll box for flightlines table
-    * Done
-17. run with scripts not in /users/rsg/stgo
-    * Soon
-18. no zip ext in some browsers?
-    * Should be fixed
+APL and NERC-ARF DEM scripts will need to be installed from source, GDAL and NumExpr can be installed using your package manager.
 
-add reset buttons
+### SCOPS ###
 
-The glorious future:
+To install use:
+```
+python setup.py install
+```
+By default this will install to `/usr/local`, you can override this by setting `--prefix`.
 
-1. Add maps for bounding box selection
-    * show the primary area
-    * show a mosaic of the mapped files
-2. improve the band selection format, preferably some kind of text box for entry of lists
-3. tooltips
-4. uploader for dem
-    * zip before upload
-    * offer an auto submit on upload complete
-5. all masking options
-6. support atmospheric correction files
+
+## Config ##
+
+For SCOPS to work on your system a number of environmental variables need to be set.
+The following is an illustration of the set up required for setup on JASMIN.
+
+```bash
+export ERROR_EMAIL=me@my.domain # Email to send error messages to
+export WEB_CONFIG_DIR=/home/users/dac/arsf_group_workspace/dac/web_processor_test/configs/ # Directory for config files
+export WEB_OUTPUT=/home/users/dac/arsf_group_workspace/dac/web_processor_test/processing/ # Directory for ouput foles
+export QSUB_LOG_DIR=/home/users/dac/arsf_group_workspace/dac/web_processor_test/logs/  # Directory for log files
+export HYPER_DELIVERY_FOLDER=/hyperspectral # Directory hyperspectral delivery files are stored within
+export TEMP_PROCESSING_DIR="" # Directory for local temporary processing (if not set will use WEB_OUTPUT"
+export QSUB_SYSTEM=bsub  # System to use for submitting jobs, e.g, bsub, qsub, or local for local processing
+export QUEUE=short-serial # Queue to use for jobs
+```

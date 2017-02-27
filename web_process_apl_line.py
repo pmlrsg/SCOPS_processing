@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 ###########################################################
-# This file has been created by ARSF Data Analysis Node and
+# This file has been created by NERC-ARF Data Analysis Node and
 # is licensed under the GPL v3 Licence. A copy of this
 # licence is available to download with this file.
 ###########################################################
@@ -134,9 +134,9 @@ def email_PI(pi_email, output_location, project):
 
    message = 'Processing is complete for your order request {}, you can now download the data from the following location:\n\n' \
              '{}\n\n' \
-             'The data will be available for a total of two weeks, however this may be extended if requested. If you identify any problems with your data or have issues downloading the data please contact ARSF-DAN staff at arsf-processing@pml.ac.uk.\n\n' \
+             'The data will be available for a total of two weeks, however this may be extended if requested. If you identify any problems with your data or have issues downloading the data please contact NERC-ARF-DAN staff at arsf-processing@pml.ac.uk.\n\n' \
              'Regards,\n' \
-             'ARSF'
+             'NERC-ARF'
 
    message = message.format(folder_name, download_link)
    send_email(message, pi_email, folder_name + " order complete", web_common.SEND_EMAIL)
@@ -153,11 +153,11 @@ def email_status(pi_email, output_location, project):
    """
    output_location = os.path.basename(os.path.normpath(output_location))
    status_link = web_common.STATUS_LINK.format(output_location, project)
-   message = "This is to notify you that your ARSF data order has begun processing. You can track its progress at the following URL:\n\n" \
+   message = "This is to notify you that your NERC-ARF data order has begun processing. You can track its progress at the following URL:\n\n" \
              "{}\n\n" \
              "You will receive a final email once all data has completed processing.\n"\
              "Regards,\n"\
-             "ARSF"
+             "NERC-ARF"
 
    message=message.format(status_link)
    send_email(message, pi_email, output_location + " order processing", web_common.SEND_EMAIL)
@@ -165,11 +165,13 @@ def email_status(pi_email, output_location, project):
 def email_preprocessing_error(pi_email, output_location, project, reason):
    output_location = os.path.basename(os.path.normpath(output_location))
    if reason is 'dem_coverage':
-      message="This is to notify you that your ARSF data order has encountered an error. The dem you uploaded does not cover enough of the project area. You can upload a new DEM file or choose to generate one at the link below.\n\n" \
+      message="This is to notify you that your NERC-ARF data order has encountered an error. " \
+              "The dem you uploaded does not cover enough of the project area. "\
+              "You can upload a new DEM file or choose to generate one at the link below.\n\n" \
               "{}\n\n" \
               "Once a new file has been uploaded your processing will progress.\n" \
               "Regards,\n" \
-              "ARSF"
+              "NERC-ARF"
       error_link = web_common.SERVER_BASE + '/dem_error/' + output_location + '?project=' + project
       message=message.format(error_link)
 

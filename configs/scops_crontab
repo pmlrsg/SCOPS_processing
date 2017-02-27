@@ -1,0 +1,3 @@
+SHELL=/bin/bash
+BASH_ENV=$HOME/.bashrc
+* * * * * web_processing_cron.py >> /users/rsg/arsf/web_processing/logs/cron/log.txt

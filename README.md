@@ -4,7 +4,7 @@
 
 ### Pre-requsites ###
 
-* APL (https://github.com/arsf/apl / ttps://nerc-arf-dan.pml.ac.uk/trac/wiki/Downloads/software/)
+* APL (https://github.com/arsf/apl / https://nerc-arf-dan.pml.ac.uk/trac/wiki/Downloads/software/)
 * NERC-ARF DEM Scripts (https://github.com/pmlrsg/arsf_dem_scripts)
 * GDAL
 * NumExpr (https://github.com/pydata/numexpr)

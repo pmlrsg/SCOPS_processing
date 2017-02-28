@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 ###########################################################
-# This file has been created by ARSF Data Analysis Node and
+# This file has been created by NERC-ARF Data Analysis Node and
 # is licensed under the GPL v3 Licence. A copy of this
 # licence is available to download with this file.
 ###########################################################
@@ -16,7 +16,7 @@ web_structure(project_code, jday, year, sortie=None, output_name=None): takes pr
 a sortie or a set folder to generate the folder tree inside
 web_qsub(config, local=False, local_threaded=False, output=None): takes a config file and transforms it to a folder tree
 with a dem file included (unless specified in the config already) will then either process files locally or submit to
-the grid. Uses web_process_apl_line.py
+the grid. Uses scops_process_apl_line.py
 """
 
 import os
@@ -27,14 +27,15 @@ if sys.version_info[0] < 3:
 else:
    import configparser as ConfigParser
 import argparse
-import arsf_dem
 import glob
 import logging
 import subprocess
-import web_process_apl_line
-import web_common
-import web_job_submission
 
+from scops import scops_common
+import scops_process_apl_line
+import scops_job_submission
+
+import arsf_dem
 from arsf_dem import dem_common_functions
 
 def web_structure(project_code, jday, year, sortie=None, output_name=None):
@@ -53,22 +54,22 @@ def web_structure(project_code, jday, year, sortie=None, output_name=None):
       folder_base = output_name
    else:
       if sortie is not "None":
-         folder_base = web_common.WEB_OUTPUT + project_code + '_' + year + '_' + jday + sortie + datetime.datetime.now().strftime(
+         folder_base = scops_common.WEB_OUTPUT + project_code + '_' + year + '_' + jday + sortie + datetime.datetime.now().strftime(
             '%Y%m%d%H%M%S')
       else:
-         folder_base = web_common.WEB_OUTPUT + project_code + '_' + year + '_' + jday + datetime.datetime.now().strftime(
+         folder_base = scops_common.WEB_OUTPUT + project_code + '_' + year + '_' + jday + datetime.datetime.now().strftime(
             '%Y%m%d%H%M%S')
    #make the folders
-   if os.access(web_common.WEB_OUTPUT, os.W_OK):
+   if os.access(scops_common.WEB_OUTPUT, os.W_OK):
       os.mkdir(folder_base)
-      os.mkdir(folder_base + web_common.WEB_MASK_OUTPUT)
-      os.mkdir(folder_base + web_common.WEB_IGM_OUTPUT)
-      os.mkdir(folder_base + web_common.WEB_MAPPED_OUTPUT)
-      os.mkdir(folder_base + web_common.WEB_DEM_FOLDER)
-      os.mkdir(folder_base + web_common.WEB_STATUS_OUTPUT)
-      os.mkdir(folder_base + web_common.LOG_DIR)
+      os.mkdir(folder_base + scops_common.WEB_MASK_OUTPUT)
+      os.mkdir(folder_base + scops_common.WEB_IGM_OUTPUT)
+      os.mkdir(folder_base + scops_common.WEB_MAPPED_OUTPUT)
+      os.mkdir(folder_base + scops_common.WEB_DEM_FOLDER)
+      os.mkdir(folder_base + scops_common.WEB_STATUS_OUTPUT)
+      os.mkdir(folder_base + scops_common.LOG_DIR)
    else:
-      raise IOError("no write permissions at {}".format(web_common.WEB_OUTPUT))
+      raise IOError("no write permissions at {}".format(scops_common.WEB_OUTPUT))
    #return the location
    return folder_base
 
@@ -84,7 +85,7 @@ def web_qsub(config, job_submission_system="local", output=None):
    :return:
    """
    logger = logging.getLogger()
-   file_handler = logging.FileHandler(web_common.QSUB_LOG_DIR + os.path.basename(config).replace(".cfg","") + "_log.txt", mode='a')
+   file_handler = logging.FileHandler(scops_common.QSUB_LOG_DIR + os.path.basename(config).replace(".cfg","") + "_log.txt", mode='a')
    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
    file_handler.setFormatter(formatter)
    logger.handlers = []
@@ -152,7 +153,7 @@ def web_qsub(config, job_submission_system="local", output=None):
       sourcefolder = folder.getProjPath()
 
    #locate delivery and navigation files
-   hyper_delivery = glob.glob(sourcefolder + web_common.HYPER_DELIVERY_FOLDER)[0]
+   hyper_delivery = glob.glob(sourcefolder + scops_common.HYPER_DELIVERY_FOLDER)[0]
    nav_folder = glob.glob(os.path.join(hyper_delivery,
                                        "flightlines/navigation/"))[0]
 
@@ -171,7 +172,7 @@ def web_qsub(config, job_submission_system="local", output=None):
          config_file.set('DEFAULT', "has_error", "True")
          raise Exception("The DEM provided does not exist, entering an error state")
       else:
-         dem_name = (output_location + web_common.WEB_DEM_FOLDER + defaults["project_code"] + '_' + defaults["year"] + '_' + defaults[
+         dem_name = (output_location + scops_common.WEB_DEM_FOLDER + defaults["project_code"] + '_' + defaults["year"] + '_' + defaults[
             "julianday"] + '_' + defaults["projection"] + ".dem").replace(' ', '_')
          arsf_dem.dem_nav_utilities.create_apl_dem_from_mosaic(dem_name,
                                                       dem_source=defaults["dem"],
@@ -189,7 +190,7 @@ def web_qsub(config, job_submission_system="local", output=None):
          nav_bounds[3] > dem_bounds[3]):
             config_file.set('DEFAULT', "has_error", "True")
             config_file.write(open(config, 'w'))
-            web_process_apl_line.email_preprocessing_error(defaults['email'], output_location, defaults['project_code'], reason="dem_coverage")
+            scops_process_apl_line.email_preprocessing_error(defaults['email'], output_location, defaults['project_code'], reason="dem_coverage")
             logger.error("The DEM provided by the user does not cover the navigation area, entering an error state")
             raise Exception("The DEM provided by the user does not cover the navigation area, entering an error state")
 
@@ -202,8 +203,8 @@ def web_qsub(config, job_submission_system="local", output=None):
 
    #Generate a status file for each line to be processed, these are important later!
    for line in lines:
-      status_file = web_common.STATUS_FILE.format(output_location, line)
-      log_file = web_common.LOG_FILE.format(output_location, line)
+      status_file = scops_common.STATUS_FILE.format(output_location, line)
+      log_file = scops_common.LOG_FILE.format(output_location, line)
       if "true" in dict(config_file.items(line))["process"]:
          open(status_file, 'w+').write("{} = {}".format(line, "waiting"))
          open(log_file, mode="a").close()
@@ -216,15 +217,15 @@ def web_qsub(config, job_submission_system="local", output=None):
             if config_file.has_option(line, equation):
                if config_file.get(line, equation) in "True":
                   #build a load of band math status amd log files
-                  bm_status_file = web_common.STATUS_FILE.format(output_location, line + equation.replace("eq_", "_"))
-                  bm_log_file =  web_common.LOG_FILE.format(output_location, line + equation.replace("eq_", "_"))
+                  bm_status_file = scops_common.STATUS_FILE.format(output_location, line + equation.replace("eq_", "_"))
+                  bm_log_file =  scops_common.LOG_FILE.format(output_location, line + equation.replace("eq_", "_"))
 
                   #open status and log files
                   open(bm_status_file, 'w+').write("{} = {}".format((line + equation.replace("eq_", "_")), "waiting"))
                   open(bm_log_file, mode="a").close()
 
    if (not config_file.getboolean('DEFAULT', 'status_email_sent')) or (new_location):
-      web_process_apl_line.email_status(defaults["email"], output_location, defaults["project_code"])
+      scops_process_apl_line.email_status(defaults["email"], output_location, defaults["project_code"])
       config_file.set('DEFAULT', "status_email_sent", "True")
       config_file.write(open(config, 'w'))
 
@@ -235,11 +236,11 @@ def web_qsub(config, job_submission_system="local", output=None):
 
    # Set up job submission system
    if job_submission_system == "local":
-      job_obj = web_job_submission.LocalJobSubmission(logger, defaults)
+      job_obj = scops_job_submission.LocalJobSubmission(logger, defaults)
    elif job_submission_system == "qsub":
-      job_obj = web_job_submission.QsubJobSubmission(logger, defaults)
+      job_obj = scops_job_submission.QsubJobSubmission(logger, defaults)
    elif job_submission_system == "bsub":
-      job_obj = web_job_submission.BsubJobSubmission(logger, defaults)
+      job_obj = scops_job_submission.BsubJobSubmission(logger, defaults)
    else:
       raise NotImplementedError("Queue submission system '{}' not implemented"
                       "".format(job_submission_system))
@@ -286,7 +287,7 @@ if __name__ == '__main__':
    if args.local:
       submission_system = 'local'
    else:
-      submission_system = web_common.QSUB_SYSTEM
+      submission_system = scops_common.QSUB_SYSTEM
 
    web_qsub(args.config, job_submission_system=submission_system,
             output=args.output)

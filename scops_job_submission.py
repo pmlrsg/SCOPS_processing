@@ -1,5 +1,5 @@
 ###########################################################
-# This file has been created by ARSF Data Analysis Node and
+# This file has been created by NERC-ARF Data Analysis Node and
 # is licensed under the GPL v3 Licence. A copy of this
 # licence is available to download with this file.
 ###########################################################
@@ -8,8 +8,8 @@ Classes for job submission.
 """
 import subprocess
 import os
-import web_process_apl_line
-import web_common
+import scops_process_apl_line
+from scops import scops_common
 
 class JobSubmission(object):
    """
@@ -44,7 +44,7 @@ class LocalJobSubmission(JobSubmission):
 
       try:
          self.logger.info("processing line {}".format(line))
-         web_process_apl_line.line_handler(config, line, output_location,
+         scops_process_apl_line.line_handler(config, line, output_location,
                                            main_line, band_ratio)
       except Exception as e:
          self.logger.error("Could not process job for {}, "
@@ -63,12 +63,12 @@ class QsubJobSubmission(JobSubmission):
 
       qsub_args = ["qsub"]
       qsub_args.extend(["-N", "WEB_" + self.defaults["project_code"] + "_" + line])
-      qsub_args.extend(["-q", web_common.QUEUE])
-      qsub_args.extend(["-P", web_common.QSUB_PROJECT])
+      qsub_args.extend(["-q", scops_common.QUEUE])
+      qsub_args.extend(["-P", scops_common.QSUB_PROJECT])
       qsub_args.extend(["-p","0"])
-      qsub_args.extend(["-wd", web_common.WEB_OUTPUT])
-      qsub_args.extend(["-e", web_common.QSUB_LOG_DIR])
-      qsub_args.extend(["-o", web_common.QSUB_LOG_DIR])
+      qsub_args.extend(["-wd", scops_common.WEB_OUTPUT])
+      qsub_args.extend(["-e", scops_common.QSUB_LOG_DIR])
+      qsub_args.extend(["-o", scops_common.QSUB_LOG_DIR])
       qsub_args.extend(["-m", "n"]) # Don't send mail
       qsub_args.extend(["-b", "y"])
       qsub_args.extend(["-l", "apl_throttle=1"])
@@ -84,7 +84,7 @@ class QsubJobSubmission(JobSubmission):
          #something went wrong so we should default to 100GB
          filesize = 100
       qsub_args.extend(["-l", "tmpfree={}".format(filesize)])
-      script_args = [web_common.PROCESS_COMMAND]
+      script_args = [scops_common.PROCESS_COMMAND]
       script_args.extend(["-l", line])
       script_args.extend(["-c", config])
       script_args.extend(["-s","fenix"])
@@ -124,13 +124,13 @@ class BsubJobSubmission(JobSubmission):
       job_name = "WEB_" + self.defaults["project_code"] + "_" + line
       qsub_args = ["bsub"]
       qsub_args.extend(["-J", job_name])
-      qsub_args.extend(["-q", web_common.QUEUE])
-      qsub_args.extend(["-o", "{}_%J.o".format(os.path.join(web_common.QSUB_LOG_DIR, job_name))])
-      qsub_args.extend(["-e", "{}_%J.e".format(os.path.join(web_common.QSUB_LOG_DIR, job_name))])
-      qsub_args.extend(["-W", web_common.QSUB_WALL_TIME])
+      qsub_args.extend(["-q", scops_common.QUEUE])
+      qsub_args.extend(["-o", "{}_%J.o".format(os.path.join(scops_common.QSUB_LOG_DIR, job_name))])
+      qsub_args.extend(["-e", "{}_%J.e".format(os.path.join(scops_common.QSUB_LOG_DIR, job_name))])
+      qsub_args.extend(["-W", scops_common.QSUB_WALL_TIME])
       qsub_args.extend(["-n", "1"])
 
-      script_args = [web_common.PROCESS_COMMAND]
+      script_args = [scops_common.PROCESS_COMMAND]
       script_args.extend(["-l", line])
       script_args.extend(["-c", config])
       script_args.extend(["-s","fenix"])

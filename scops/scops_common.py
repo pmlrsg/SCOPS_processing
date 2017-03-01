@@ -17,14 +17,26 @@ environmental variables of the same name.
 """
 import os
 
-#main executable location
+#location of library in checkout
 COMMON_LOCATION = os.path.dirname(os.path.realpath(__file__))
+
+#install prefix, if library has been installed.
+INSTALL_PREFIX = os.path.abspath(__file__)[:os.path.abspath(__file__).find("lib")]
 
 #forces processing to occur on the machine running the submission cron job
 FORCE_LOCAL = False
 
 #the location of the main processing executable
-PROCESS_COMMAND = COMMON_LOCATION + "/scops_process_apl_line.py"
+PROCESS_COMMAND = os.path.abspath(os.path.join(COMMON_LOCATION, os.pardir,
+                                               "scops_process_apl_line.py"))
+
+#try to figure out if running from checkout or installed to PREFIX/bin
+if not os.path.isfile(PROCESS_COMMAND):
+    PROCESS_COMMAND = os.path.join(INSTALL_PREFIX, "bin",
+                                   "scops_process_apl_line.py")
+    if not os.path.isfile(PROCESS_COMMAND):
+        raise Exception("Could not find 'scops_process_apl_line.py' in "
+                        "standard location - please set manually")
 
 #the following are output folders, they shouldn't need to be changed and will all exist under the main processing folder
 #mask output location
@@ -99,7 +111,17 @@ VIEW_VECTOR_FILE = "/sensor_FOV_vectors/{}_fov_fullccd_vectors.bil"
 QSUB_SYSTEM = "qsub"
 
 #location of command to submit to queue
-QSUB_COMMAND = os.path.abspath(os.path.join(__file__, os.pardir)) + '/' + 'scops_qsub.py'
+QSUB_COMMAND = os.path.abspath(os.path.join(COMMON_LOCATION, os.pardir,
+                                            "scops_qsub.py"))
+
+#try to figure out if running from checkout or installed to PREFIX/bin
+if not os.path.isfile(QSUB_COMMAND):
+    QSUB_COMMAND = os.path.join(INSTALL_PREFIX, "bin",
+                                   "scops_qsub.py")
+    if not os.path.isfile(QSUB_COMMAND):
+        raise Exception("Could not find 'scops_qsub.py' in "
+                        "standard location - please set manually")
+
 
 #The main queue to be submitted to
 QUEUE = "arsf.q"

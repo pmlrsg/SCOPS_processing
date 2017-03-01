@@ -45,7 +45,7 @@ from scops import scops_common
 
 from arsf_dem import dem_common_functions
 
-def send_email(message, receive, subject, sender, no_bcc=False):
+def send_email(message, receive, subject, sender, no_bcc=False, no_error=True):
    """
    Sends an email using smtplib
    """
@@ -55,8 +55,12 @@ def send_email(message, receive, subject, sender, no_bcc=False):
    msg['Subject'] = subject
    recipients = []
    recipients.extend([receive])
+
    if not no_bcc:
-      recipients.extend([scops_common.BCC_EMAIL, scops_common.ERROR_EMAIL])
+      recipients.extend([scops_common.BCC_EMAIL])
+
+      if not no_error and (scops_common.ERROR_EMAIL != scops_common.BCC_EMAIL):
+         recipients.extend([scops_common.ERROR_EMAIL])
 
    try:
       for recipient in recipients:

@@ -9,4 +9,3 @@ Author: Stephen Goult
 # is licensed under the GPL v3 Licence. A copy of this
 # licence is available to download with this file.
 ###########################################################
-

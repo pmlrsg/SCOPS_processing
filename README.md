@@ -6,7 +6,7 @@
 
 * APL (https://github.com/arsf/apl / https://nerc-arf-dan.pml.ac.uk/trac/wiki/Downloads/software/)
 * NERC-ARF DEM Scripts (https://github.com/pmlrsg/arsf_dem_scripts)
-* GDAL
+* GDAL (http://gdal.org/)
 * NumExpr (https://github.com/pydata/numexpr)
 
 APL and NERC-ARF DEM scripts will need to be installed from source, GDAL and NumExpr can be installed using your package manager.

@@ -141,7 +141,7 @@ def email_PI(pi_email, output_location, project):
               '{}\n\n' \
               'The data will be available for a total of two weeks, however this may be extended if requested. If you identify any problems with your data or have issues downloading the data please contact NERC-ARF-DAN staff at arsf-processing@pml.ac.uk.\n\n' \
               'Regards,\n' \
-              'NERC-ARF'
+              'NERC-ARF-DAN'
 
     message = message.format(folder_name, download_link)
     send_email(message, pi_email, folder_name + " order complete", scops_common.SEND_EMAIL)
@@ -162,7 +162,7 @@ def email_status(pi_email, output_location, project):
               "{}\n\n" \
               "You will receive a final email once all data has completed processing.\n"\
               "Regards,\n"\
-              "NERC-ARF"
+              "NERC-ARF-DAN"
 
     message=message.format(status_link)
     send_email(message, pi_email, output_location + " order processing", scops_common.SEND_EMAIL)
@@ -176,7 +176,7 @@ def email_preprocessing_error(pi_email, output_location, project, reason):
                 "{}\n\n" \
                 "Once a new file has been uploaded your processing will progress.\n" \
                 "Regards,\n" \
-                "NERC-ARF"
+                "NERC-ARF-DAN"
         error_link = scops_common.SERVER_BASE + '/dem_error/' + output_location + '?project=' + project
         message=message.format(error_link)
 

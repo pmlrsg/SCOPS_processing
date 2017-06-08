@@ -153,24 +153,23 @@ DEBUG_FILE_WRITEBACK = False
 # Now go through all variables and check if they should be overwritten
 # by an environmental variable of the same name.
 for env_var in dir():
-   # Only check for all upper case variable names.
-   if env_var.upper() == env_var:
-      env_var_value = None
-      # See if an environmental variable has been set with the same
-      # name
-      try:
-         env_var_value = os.environ[env_var]
-      except KeyError:
-         pass
-      # If environmental variable has been set overwrite default
-      # value
-      if env_var_value is not None:
-         locals()[env_var] = env_var_value
+    # Only check for all upper case variable names.
+    if env_var.upper() == env_var:
+        env_var_value = None
+        # See if an environmental variable has been set with the same
+        # name
+        try:
+            env_var_value = os.environ[env_var]
+        except KeyError:
+            pass
+        # If environmental variable has been set overwrite default
+        # value
+        if env_var_value is not None:
+            locals()[env_var] = env_var_value
 
 # Check for the temp processing directory. If it has been set to
 # an empty string assume TEMP_PROCESSING isn't required.
 
 if TEMP_PROCESSING_DIR == "":
-   #whether to process on local file system of gridnodes
-   TEMP_PROCESSING = False
-
+    #whether to process on local file system of gridnodes
+    TEMP_PROCESSING = False

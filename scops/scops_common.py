@@ -24,7 +24,7 @@ COMMON_LOCATION = os.path.dirname(os.path.realpath(__file__))
 INSTALL_PREFIX = os.path.abspath(__file__)[:os.path.abspath(__file__).find("lib")]
 
 #forces processing to occur on the machine running the submission cron job
-FORCE_LOCAL = False
+FORCE_LOCAL = True
 
 #the location of the main processing executable
 PROCESS_COMMAND = os.path.abspath(os.path.join(COMMON_LOCATION, os.pardir,
@@ -65,7 +65,7 @@ NAVIGATION_FOLDER = "/flightlines/navigation/"
 
 #delivery folder for hyperspectral within project
 #can use wildcards.
-HYPER_DELIVERY_FOLDER = "/delivery/*hyperspectral*/"
+HYPER_DELIVERY_FOLDER = "/delivery/*{}*/"
 
 #core processing output location, workspaces are spawned here
 WEB_OUTPUT = "/users/rsg/arsf/web_processing/processing/"
@@ -91,8 +91,12 @@ OSNG_SEPERATION_FILE = "/users/rsg/arsf/dems/ostn02/OSTN02_NTv2.gsb"
 SERVER_BASE = 'https://nerc-arf-dan.pml.ac.uk'
 
 
+
 #both these link variables need to be updated to the main processor URL
 DOWNLOAD_LINK = SERVER_BASE + '/processor/downloads/{}?&project={}'
+
+#line link - used for individual line downloads
+LINE_LINK = SERVER_BASE + '/processor/downloads/{}/{}?&project={}'
 
 #http location to access the status page
 STATUS_LINK = SERVER_BASE +'/processor/status/{}?&project={}'
@@ -173,3 +177,7 @@ for env_var in dir():
 if TEMP_PROCESSING_DIR == "":
     #whether to process on local file system of gridnodes
     TEMP_PROCESSING = False
+   
+USE_DB = True
+
+DB_LOCATION = os.path.join(os.path.dirname(__file__), "scops_status_db.db")

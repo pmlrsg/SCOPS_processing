@@ -44,6 +44,7 @@ class LocalJobSubmission(JobSubmission):
 
         try:
             self.logger.info("processing line {}".format(line))
+            print config, line, output_location, main_line, band_ratio
             scops_process_apl_line.line_handler(config, line, output_location,
                                               main_line, band_ratio)
         except Exception as e:

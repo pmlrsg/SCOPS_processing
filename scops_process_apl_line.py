@@ -77,6 +77,9 @@ def send_email(message, receive, subject, sender, no_bcc=False, no_error=True):
         raise Exception(e)
 
 def progress_detail_updater_spinner(processing_id, output_folder, logfile, line):
+    """
+    Updates the database with the current status/progress of ouir processing by interpretting the logs every second
+    """
     complete = False
     iter = 0
     while not complete:
@@ -93,6 +96,9 @@ def progress_detail_updater_spinner(processing_id, output_folder, logfile, line)
         time.sleep(1)
 
 def progress_detail_updater(processing_id, output_folder, logfile, line, status):
+    """
+    A big switch to work out what the log means at any point, vital for the updating of the database.
+    """
     zipfile_name = os.path.join(output_folder, 'mapped', os.path.basename(line) + "3b_mapped.bil.zip")
 
     zipbyte="MB"
@@ -289,7 +295,9 @@ def email_preprocessing_error(pi_email, output_location, project, reason):
 
 def status_update(processing_folder, status_file, newstage, line):
     """
-    updates the status files with a new stage or completion
+    Updates the status files with a new stage or completion.
+    Uses the processing folder as a processing id in the status databse if enabled.
+    :param processing_folder:
     :param status_file:
     :param newstage:
     :param line:
@@ -439,6 +447,7 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
     #in case we've already run it once
     status_update(processing_id, status_file, "Waiting to process", output_line_name)
     try:
+        #if we fail then the webpage won't be able to update - this is less than ideal but we can always resubmit the job
         progress_thread = threading.Thread(target=progress_detail_updater_spinner, args=(processing_id, output_location, logfile, output_line_name))
         progress_thread.daemon = True
         progress_thread.start()

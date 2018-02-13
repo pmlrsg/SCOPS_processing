@@ -323,7 +323,7 @@ def line_handler(config_file, line_name, output_location, process_main_line, pro
    line_details = dict(config.items(line_name))
    if output_location is None:
       output_location = line_details["output_folder"]
-   
+
    processing_id = os.path.basename(line_details["output_folder"])
    #set up folders
    jday = "{0:03d}".format(int(line_details["julianday"]))
@@ -477,17 +477,17 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
 
    #set up projection strings
    if "UTM" in line_details["projection"]:
-       zone = line_details["projection"].split(" ")[2]
-       hemisphere=zone[2:]
-       zone = zone[:-1]
+      zone = line_details["projection"].split(" ")[2]
+      hemisphere=zone[2:]
+      zone = zone[:-1]
 
-       projection = pipes.quote("utm_wgs84{}_{}".format(hemisphere, zone))
+      projection = pipes.quote("utm_wgs84{}_{}".format(hemisphere, zone))
    elif "UKBNG" in line_details["projection"]:
-       projection = "osng"
+      projection = "osng"
    else:
-       logger.error("Couldn't find the projection from input string")
-       status_update(processing_id, status_file, "ERROR - projection not identified", output_line_name)
-       raise Exception("Unable to identify projection")
+      logger.error("Couldn't find the projection from input string")
+      status_update(processing_id, status_file, "ERROR - projection not identified", output_line_name)
+      raise Exception("Unable to identify projection")
 
    #set up file locations and tmp folder if we need it
    if tmp:
@@ -527,13 +527,13 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
 
          #try running the command and except on failure
          try:
-             dem_common_functions.CallSubprocessOn(aplmask_cmd, redirect=False, logger=logger)
-             if not os.path.exists(masked_file):
-                 raise Exception("masked file not output")
+            dem_common_functions.CallSubprocessOn(aplmask_cmd, redirect=False, logger=logger)
+            if not os.path.exists(masked_file):
+               raise Exception("masked file not output")
          except Exception as e:
-             status_update(processing_id, status_file, "ERROR - aplmask", output_line_name)
-             logger.error([e, output_line_name])
-             raise Exception(e)
+            status_update(processing_id, status_file, "ERROR - aplmask", output_line_name)
+            logger.error([e, output_line_name])
+            raise Exception(e)
       else:
          masked_file = input_lev1_file
 
@@ -552,13 +552,13 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
       aplcorr_cmd.extend(["-igmfile", igm_file])
 
       try:
-          dem_common_functions.CallSubprocessOn(aplcorr_cmd, redirect=False, logger=logger)
-          if not os.path.exists(igm_file):
-              raise Exception("igm file not output by aplcorr!")
+         dem_common_functions.CallSubprocessOn(aplcorr_cmd, redirect=False, logger=logger)
+         if not os.path.exists(igm_file):
+            raise Exception("igm file not output by aplcorr!")
       except Exception as e:
-          status_update(processing_id, status_file, "ERROR - aplcorr", output_line_name)
-          logger.error([e, output_line_name])
-          raise Exception(e)
+         status_update(processing_id, status_file, "ERROR - aplcorr", output_line_name)
+         logger.error([e, output_line_name])
+         raise Exception(e)
 
    igm_file_transformed = igm_file.replace(".igm", "_{}.igm").format(projection.replace(' ', '_'))
 

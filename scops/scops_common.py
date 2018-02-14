@@ -181,3 +181,5 @@ if TEMP_PROCESSING_DIR == "":
 USE_DB = True
 
 DB_LOCATION = os.path.join(os.path.dirname(__file__), "scops_status_db.db")
+
+STAGES = ['aplmask','aplcorr','apltran','aplmap','zipping']

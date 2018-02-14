@@ -50,6 +50,9 @@ from scops import scops_common
 
 from arsf_dem import dem_common_functions
 
+def status_to_number(status):
+    return scops_common.STAGES.index(status)
+
 def send_email(message, receive, subject, sender, no_bcc=False, no_error=True):
     """
     Sends an email using smtplib
@@ -151,7 +154,7 @@ def progress_detail_updater(processing_id, output_folder, logfile, line, status)
         weight = 5
         stage = "Zipping"
         stageprogress = 95
-    if "aplmap" in status:
+    elif "aplmap" in status:
         weight = 50
         stage = "Mapping"
         stageprogress = 45
@@ -251,7 +254,7 @@ def email_PI(pi_email, output_location, project):
               '{}\n\n' \
               'The data will be available for a total of two weeks, however this may be extended if requested. If you identify any problems with your data or have issues downloading the data please contact NERC-ARF-DAN staff at arsf-processing@pml.ac.uk.\n\n' \
               'Regards,\n' \
-              'NERC-ARF-DAN
+              'NERC-ARF-DAN'
 
     message = message.format(folder_name, download_link)
     send_email(message, pi_email, folder_name + " order complete", scops_common.SEND_EMAIL)
@@ -308,7 +311,7 @@ def status_update(processing_folder, status_file, newstage, line):
     open(status_file, 'w').write("{} = {}".format(line, newstage))
 
 
-def line_handler(config_file, line_name, output_location, process_main_line, process_band_ratio):
+def line_handler(config_file, line_name, output_location, process_main_line, process_band_ratio, resume=False):
     """
     The main handler function. This grabs all lines that need to be processed,
     performs band math if requested then dispatches a series of APL requests to
@@ -321,6 +324,7 @@ def line_handler(config_file, line_name, output_location, process_main_line, pro
     :param process_main_line:
     :param process_band_ratio:
     """
+    print resume
     if not os.path.isfile(config_file):
         raise IOError("Config file not found. Check {} is a valid file".format(config_file))
     #read the config
@@ -372,7 +376,7 @@ def line_handler(config_file, line_name, output_location, process_main_line, pro
     if process_main_line:
         if process_band_ratio:
             last_process = False
-        process_web_hyper_line(config, line_name, os.path.basename(lev1file), band_list, output_location, lev1file, hyper_delivery, input_lev1_file=None, data_type="uint16", last_process=last_process, tmp=tmp_process)
+        process_web_hyper_line(config, line_name, os.path.basename(lev1file), band_list, output_location, lev1file, hyper_delivery, input_lev1_file=None, data_type="uint16", last_process=last_process, tmp=tmp_process, resume=resume)
 
     if process_band_ratio:
         equations = [x for x in dict(config.items(line_name)) if "eq_" in x]
@@ -392,10 +396,10 @@ def line_handler(config_file, line_name, output_location, process_main_line, pro
                 polite_eq_name = eq_name.replace("eq_", "")
                 if enum == len(equations)-1:
                     last_process = True
-                process_web_hyper_line(config, line_name, os.path.basename(bm_file), band_list, output_location, lev1file, hyper_delivery, input_lev1_file=bm_file, maskfile=bandmath_maskfile, eq_name=polite_eq_name, last_process=last_process, tmp=tmp_process)
+                process_web_hyper_line(config, line_name, os.path.basename(bm_file), band_list, output_location, lev1file, hyper_delivery, input_lev1_file=bm_file, maskfile=bandmath_maskfile, eq_name=polite_eq_name, last_process=last_process, tmp=tmp_process, resume=resume)
 
 
-def process_web_hyper_line(config, base_line_name, output_line_name, band_list, output_location, lev1file, hyper_delivery, input_lev1_file=None, skip_stages=[], maskfile=None, data_type="float32", eq_name=None, last_process=False, tmp=False):
+def process_web_hyper_line(config, base_line_name, output_line_name, band_list, output_location, lev1file, hyper_delivery, input_lev1_file=None, skip_stages=[], maskfile=None, data_type="float32", eq_name=None, last_process=False, tmp=False, resume=False):
     """
     Main function, takes a line and processes it through APL, generates a log file for each line with the output from APL
 
@@ -407,7 +411,6 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
     :param output_location:
     :return:
     """
-
 
     #set up logging
     logger = logging.getLogger()
@@ -442,10 +445,11 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
     open(status_file, 'w+').write("{} = {}".format(logstat_name,  scops_common.INITIAL_STATUS))
     output_line_name = logstat_name
 
-    link = scops_common.LINE_LINK.format(processing_id, output_line_name, line_details["project_code"])
-    status_db.insert_line_into_db(processing_id, output_line_name, "Waiting to process", 0, 0, 0, 0, link, 0, 0)
-    #in case we've already run it once
-    status_update(processing_id, status_file, "Waiting to process", output_line_name)
+    if not resume:
+        link = scops_common.LINE_LINK.format(processing_id, output_line_name, line_details["project_code"])
+        status_db.insert_line_into_db(processing_id, output_line_name, "Waiting to process", 0, 0, 0, 0, link, 0, 0)
+        #in case we've already run it once
+        status_update(processing_id, status_file, "Waiting to process", output_line_name)
     try:
         #if we fail then the webpage won't be able to update - this is less than ideal but we can always resubmit the job
         progress_thread = threading.Thread(target=progress_detail_updater_spinner, args=(processing_id, output_location, logfile, output_line_name))
@@ -453,6 +457,12 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
         progress_thread.start()
     except Exception as e:
         print e
+
+    if resume:
+        resume_stage = status_db.get_line_status_from_db(processing_id, output_line_name)[0]
+        start_stage = status_to_number(resume_stage)
+    else:
+        start_stage = 0
 
     jday = "{0:03d}".format(int(line_details["julianday"]))
 
@@ -515,10 +525,9 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
         mapname = output_location + scops_common.WEB_MAPPED_OUTPUT +output_line_name + "3b_mapped.bil"
 
 
-    #set new status to masking
-    status_update(processing_id, status_file, "aplmask", output_line_name)
-
-    if not "masking" in skip_stages:
+    if not "masking" in skip_stages or start_stage >= 1:
+        #set new status to masking
+        status_update(processing_id, status_file, "aplmask", output_line_name)
         if not 'none' in line_details['masking']:
             #generate masking command
             aplmask_cmd = ["aplmask"]
@@ -546,13 +555,13 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
         else:
             masked_file = input_lev1_file
 
-    status_update(processing_id, status_file, "aplcorr", output_line_name)
-
-    #get the navfile
-    nav_file = glob.glob(hyper_delivery + scops_common.NAVIGATION_FOLDER + base_line_name + "*_nav_post_processed.bil")[0]
-
     #aplcorr command
-    if not os.path.exists(igm_file):
+    if not os.path.exists(igm_file) or start_stage >= 2:
+        status_update(processing_id, status_file, "aplcorr", output_line_name)
+
+        #get the navfile
+        nav_file = glob.glob(hyper_delivery + scops_common.NAVIGATION_FOLDER + base_line_name + "*_nav_post_processed.bil")[0]
+
         aplcorr_cmd = ["aplcorr"]
         aplcorr_cmd.extend(["-lev1file", lev1file])
         aplcorr_cmd.extend(["-navfile", nav_file])
@@ -574,54 +583,56 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
     if projection in "osng":
         projection = projection + " " + scops_common.OSNG_SEPERATION_FILE
 
-    status_update(processing_id, status_file, "apltran", output_line_name)
+    if start_stage >= 3:
+        status_update(processing_id, status_file, "apltran", output_line_name)
 
-    #build the transformation command, its worth running this just in case
-    apltran_cmd = ["apltran"]
-    apltran_cmd.extend(["-inproj", "latlong", "WGS84"])
-    apltran_cmd.extend(["-igm", igm_file])
-    apltran_cmd.extend(["-output", igm_file_transformed])
-    if "utm" in projection:
-        apltran_cmd.extend(["-outproj", "utm_wgs84{}".format(hemisphere), zone])
-    elif "osng" in projection:
-        apltran_cmd.extend(["-outproj", "osng", scops_common.OSNG_SEPERATION_FILE])
+        #build the transformation command, its worth running this just in case
+        apltran_cmd = ["apltran"]
+        apltran_cmd.extend(["-inproj", "latlong", "WGS84"])
+        apltran_cmd.extend(["-igm", igm_file])
+        apltran_cmd.extend(["-output", igm_file_transformed])
+        if "utm" in projection:
+            apltran_cmd.extend(["-outproj", "utm_wgs84{}".format(hemisphere), zone])
+        elif "osng" in projection:
+            apltran_cmd.extend(["-outproj", "osng", scops_common.OSNG_SEPERATION_FILE])
 
-    try:
-        dem_common_functions.CallSubprocessOn(apltran_cmd, redirect=False, logger=logger)
-        if not os.path.exists(igm_file_transformed):
-            raise Exception("igm file not output by apltran!")
-    except Exception as e:
-        status_update(processing_id, status_file, "ERROR - apltran", output_line_name)
-        logger.error([e,output_line_name])
-        raise Exception(e)
+        try:
+            dem_common_functions.CallSubprocessOn(apltran_cmd, redirect=False, logger=logger)
+            if not os.path.exists(igm_file_transformed):
+                raise Exception("igm file not output by apltran!")
+        except Exception as e:
+            status_update(processing_id, status_file, "ERROR - apltran", output_line_name)
+            logger.error([e,output_line_name])
+            raise Exception(e)
 
-    status_update(processing_id, status_file, "aplmap", output_line_name)
+    if start_stage >= 4:
+        status_update(processing_id, status_file, "aplmap", output_line_name)
 
-    #set pixel size and map name
-    pixelx, pixely = line_details["pixelsize"].split(" ")
+        #set pixel size and map name
+        pixelx, pixely = line_details["pixelsize"].split(" ")
 
 
-    aplmap_cmd = ["aplmap"]
-    aplmap_cmd.extend(["-igm", igm_file_transformed])
-    aplmap_cmd.extend(["-lev1", masked_file])
-    aplmap_cmd.extend(["-pixelsize", pixelx, pixely])
-    aplmap_cmd.extend(["-bandlist", band_list])
-    aplmap_cmd.extend(["-interpolation", line_details["interpolation"]])
-    aplmap_cmd.extend(["-mapname", mapname])
-    aplmap_cmd.extend(["-buffersize", str(4096)])
-    aplmap_cmd.extend(["-outputlevel", "verbose"])
-    aplmap_cmd.extend(["-outputdatatype", data_type])
-    if aplmap_ignore_freespace:
-        aplmap_cmd.extend(["-ignorediskspace"])
+        aplmap_cmd = ["aplmap"]
+        aplmap_cmd.extend(["-igm", igm_file_transformed])
+        aplmap_cmd.extend(["-lev1", masked_file])
+        aplmap_cmd.extend(["-pixelsize", pixelx, pixely])
+        aplmap_cmd.extend(["-bandlist", band_list])
+        aplmap_cmd.extend(["-interpolation", line_details["interpolation"]])
+        aplmap_cmd.extend(["-mapname", mapname])
+        aplmap_cmd.extend(["-buffersize", str(4096)])
+        aplmap_cmd.extend(["-outputlevel", "verbose"])
+        aplmap_cmd.extend(["-outputdatatype", data_type])
+        if aplmap_ignore_freespace:
+            aplmap_cmd.extend(["-ignorediskspace"])
 
-    try:
-        log = dem_common_functions.CallSubprocessOn(aplmap_cmd, redirect=False, logger=logger)
-        if not os.path.exists(mapname):
-            raise Exception("mapped file not output by aplmap!")
-    except Exception as e:
-        status_update(processing_id, status_file, "ERROR - aplmap", output_line_name)
-        logger.error([e,output_line_name])
-        raise Exception(e)
+        try:
+            log = dem_common_functions.CallSubprocessOn(aplmap_cmd, redirect=False, logger=logger)
+            if not os.path.exists(mapname):
+                raise Exception("mapped file not output by aplmap!")
+        except Exception as e:
+            status_update(processing_id, status_file, "ERROR - aplmap", output_line_name)
+            logger.error([e,output_line_name])
+            raise Exception(e)
 
     status_update(processing_id, status_file, "waiting to zip", output_line_name)
 
@@ -737,6 +748,10 @@ if __name__ == '__main__':
                         help='process main line',
                         action="store_true",
                         dest="bandmath")
+    parser.add_argument('--noresume',
+                        '-n',
+                        help="don't try to pick up where we left off",
+                        action="store_true",
+                        dest="noresume")
     args = parser.parse_args()
-
-    line_handler(args.config, args.line, args.output, args.main, args.bandmath)
+    line_handler(args.config, args.line, args.output, args.main, args.bandmath, resume=(not args.noresume))

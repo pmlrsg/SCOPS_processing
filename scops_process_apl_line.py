@@ -553,7 +553,7 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
         mapname = output_location + scops_common.WEB_MAPPED_OUTPUT +output_line_name + "3b_mapped.bil"
 
 
-    if not "masking" in skip_stages or start_stage <= 1:
+    if  "masking" not in skip_stages and start_stage <= 1:
         #set new status to masking
         status_update(processing_id, status_file, "aplmask", output_line_name)
         if not 'none' in line_details['masking']:

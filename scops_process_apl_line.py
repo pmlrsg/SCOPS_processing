@@ -553,7 +553,7 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
         mapname = output_location + scops_common.WEB_MAPPED_OUTPUT +output_line_name + "3b_mapped.bil"
 
 
-    if not "masking" in skip_stages or start_stage >= 1:
+    if not "masking" in skip_stages or start_stage <= 1:
         #set new status to masking
         status_update(processing_id, status_file, "aplmask", output_line_name)
         if not 'none' in line_details['masking']:
@@ -586,7 +586,7 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
         masked_file = input_lev1_file
 
     #aplcorr command
-    if not os.path.exists(igm_file) or start_stage >= 2:
+    if not os.path.exists(igm_file) or start_stage <= 2:
         status_update(processing_id, status_file, "aplcorr", output_line_name)
 
         #get the navfile
@@ -613,7 +613,7 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
     if projection in "osng":
         projection = projection + " " + scops_common.OSNG_SEPERATION_FILE
 
-    if start_stage >= 3:
+    if start_stage <= 3:
         status_update(processing_id, status_file, "apltran", output_line_name)
 
         #build the transformation command, its worth running this just in case
@@ -635,7 +635,7 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
             logger.error([e,output_line_name])
             raise Exception(e)
 
-    if start_stage >= 4:
+    if start_stage <= 4:
         status_update(processing_id, status_file, "aplmap", output_line_name)
 
         #set pixel size and map name

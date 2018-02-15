@@ -49,6 +49,7 @@ import scops_bandmath
 from scops import scops_common
 
 from arsf_dem import dem_common_functions
+import importlib
 
 def send_email(message, receive, subject, sender, no_bcc=False, no_error=True):
     """
@@ -251,7 +252,7 @@ def email_PI(pi_email, output_location, project):
               '{}\n\n' \
               'The data will be available for a total of two weeks, however this may be extended if requested. If you identify any problems with your data or have issues downloading the data please contact NERC-ARF-DAN staff at arsf-processing@pml.ac.uk.\n\n' \
               'Regards,\n' \
-              'NERC-ARF-DAN
+              'NERC-ARF-DAN'
 
     message = message.format(folder_name, download_link)
     send_email(message, pi_email, folder_name + " order complete", scops_common.SEND_EMAIL)
@@ -376,6 +377,8 @@ def line_handler(config_file, line_name, output_location, process_main_line, pro
 
     if process_band_ratio:
         equations = [x for x in dict(config.items(line_name)) if "eq_" in x]
+        plugins = [x for x in dict(config.items(line_name)) if "plugin_" in x]
+        #process the equations from the band math
         for enum, eq_name in enumerate(equations):
             last_process=False
             if config.get(line_name, eq_name) in "True":
@@ -393,6 +396,27 @@ def line_handler(config_file, line_name, output_location, process_main_line, pro
                 if enum == len(equations)-1:
                     last_process = True
                 process_web_hyper_line(config, line_name, os.path.basename(bm_file), band_list, output_location, lev1file, hyper_delivery, input_lev1_file=bm_file, maskfile=bandmath_maskfile, eq_name=polite_eq_name, last_process=last_process, tmp=tmp_process)
+
+        #process the plugins - these are all for level1b running
+        sys.path.append(config.get('DEFAULT','plugin_directory'))
+        for enum, plugin_name in enumerate(plugins):
+            last_process=False
+            if config.get(line_name, plugin_name) in "True":
+                equation = config.get('DEFAULT', plugin_name)
+                output_location_updated = output_location + "/level1b"
+                #import plugin_name
+                polite_plugin_name = plugin_name.replace("plugin_", "")
+                plugin_module_name=polite_plugin_name.replace(".py","")
+                plugin_module=importlib.import_module(plugin_module_name)
+                #run plugin
+                bm_file=plugin_module.run(output_folder=output_location_updated,hsi_filename=lev1file)
+                #always do all bands
+                band_list="ALL"
+                skip_stages=['masking']
+                if enum == len(plugins)-1:
+                    last_process = True
+                process_web_hyper_line(config, line_name, os.path.basename(bm_file), band_list, output_location, lev1file, hyper_delivery, input_lev1_file=bm_file, skip_stages=skip_stages,maskfile=None, eq_name=polite_plugin_name, last_process=last_process, tmp=tmp_process)
+
 
 
 def process_web_hyper_line(config, base_line_name, output_line_name, band_list, output_location, lev1file, hyper_delivery, input_lev1_file=None, skip_stages=[], maskfile=None, data_type="float32", eq_name=None, last_process=False, tmp=False):
@@ -545,6 +569,8 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
                 raise Exception(e)
         else:
             masked_file = input_lev1_file
+    else:
+        masked_file = input_lev1_file
 
     status_update(processing_id, status_file, "aplcorr", output_line_name)
 

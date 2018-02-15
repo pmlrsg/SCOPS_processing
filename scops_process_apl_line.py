@@ -413,13 +413,17 @@ def line_handler(config_file, line_name, output_location, process_main_line, pro
                 plugin_module_name=polite_plugin_name.replace(".py","")
                 plugin_module=importlib.import_module(plugin_module_name)
                 #run plugin
-                bm_file=plugin_module.run(output_folder=output_location_updated,hsi_filename=lev1file)
+                plugin_args={'output_folder' : output_location_updated,
+                             'hsi_filename' : lev1file,
+                             }
+                processed_file=plugin_module.run(**plugin_args)
                 #always do all bands
                 band_list="ALL"
+                #do not do masking as the mask does not match this file anymore. Potentially should apply mask first before running the plugin
                 skip_stages=['masking']
                 if enum == len(plugins)-1:
                     last_process = True
-                process_web_hyper_line(config, line_name, os.path.basename(bm_file), band_list, output_location, lev1file, hyper_delivery, input_lev1_file=bm_file, skip_stages=skip_stages,maskfile=None, eq_name=polite_plugin_name, last_process=last_process, tmp=tmp_process)
+                process_web_hyper_line(config, line_name, os.path.basename(processed_file), band_list, output_location, lev1file, hyper_delivery, input_lev1_file=processed_file, skip_stages=skip_stages,maskfile=None, eq_name=polite_plugin_name, last_process=last_process, tmp=tmp_process)
 
 
 

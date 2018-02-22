@@ -110,42 +110,10 @@ def run(output_folder=None,hsi_filename=None,refspectra="/users/rsg/mark1/codere
     returns:
         outputfilename - filename of classification written to disk
     """
-    print(output_folder)
     outputfilename=os.path.join(output_folder,os.path.basename(os.path.splitext(hsi_filename)[0])+"_spectral_angle_classification.bsq")
     #list to save the spectra to - this will be stacked into a numpy array
     spectralist=[]
     spectra_id=[]
-
-    #try:
-        #if os.path.isdir(refspectra):
-            ##loop through and load in each spectra to test against
-            #filelist=glob.glob("{}/*.txt".format(refspectra))
-            #for i,spectral_file in enumerate(filelist):
-                #spectradata=numpy.genfromtxt(spectral_file,names=True)
-                #names=list(spectradata.dtype.names)
-                #for wavekey in ["Wavelength","wavelength"]:
-                    #try:
-                        #names.remove(wavekey)
-                    #except:
-                        #pass
-                #spectralist.append(spectradata[names])
-            #spectra=numpy.vstack(spectralist)
-            #spectra_id=filelist
-        #else:
-            ##open the gdal supported reference spectra file
-            #gdalfile=gdal.Open(refspectra)
-            ##get the number of spectra (bands) in the file
-            #number_of_bands=gdalfile.RasterCount
-            ##loop through each of the bands
-            #for i,band in enumerate(range(1,number_of_bands+1)):
-                #spectralist.append(gdalfile.GetRasterBand(band).ReadAsArray().astype(numpy.float32))
-            #spectra=numpy.vstack(spectralist)
-            #spectra_id=['ref_spectra{}'.format(i) for i in range(spectra.shape[0])]
-            #gdalfile=None
-    #except Exception as exc:
-        #raise Exception("Failed to read in reference spectra beacuse of {}".format(exc))
-
-
 
     #get the wavelengths from the HSI file
     if hsi_wavelengths is None:
@@ -187,10 +155,10 @@ def run(output_folder=None,hsi_filename=None,refspectra="/users/rsg/mark1/codere
     angles=calculate_spectral_angle(hsi_filename,spectra)
     classification=create_classification_mask(angles)
 
+    #print out pixels that have no classification for debug purposes
     I=numpy.where(classification>10)
     for i in angles.keys():
         print(i,angles[i][I])
-
 
     #write out the classification mask
     driver=gdal.GetDriverByName(filetype)

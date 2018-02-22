@@ -23,13 +23,15 @@ def calculate_spectral_angle(hsi_filename,spectra):
     gdalfile=gdal.Open(hsi_filename)
     #get the number of bands in the file
     number_of_bands=gdalfile.RasterCount
+    if number_of_bands!=spectra.shape[1]:
+        raise Exception("The reference spectra must be sampled to the same wavelengths as the hyperspectral data.")
     #define the arrays and set to zero
     hsi_magnitude=numpy.zeros([gdalfile.RasterYSize,gdalfile.RasterXSize])
     spectra_magnitude=numpy.zeros(spectra.shape[0])
     dot_sum=numpy.zeros([spectra.shape[0],gdalfile.RasterYSize,gdalfile.RasterXSize])
     #loop through each of the bands and calculate the values we need
     for i,band in enumerate(range(1,number_of_bands+1)):
-        print("Working on band: ",i)
+        print("Working on band: {}/{}".format(i,number_of_bands))
         band_data=gdalfile.GetRasterBand(band).ReadAsArray().astype(numpy.float32)
         #sum up the band squared to calculate the magnitude later
         hsi_magnitude=hsi_magnitude+(band_data*band_data)
@@ -90,12 +92,13 @@ def create_classification_mask(angles):
         indices=(numpy.array([int(i) for i in float_indices]),
                  numpy.array([int(round(math.modf(i)[0]*scalar)) for i in float_indices]))
 
-        #here indices are only the ones where this class is smallest
-        classification[indices]=classkey
+        if len(indices[0])!=0:
+            #here indices are only the ones where this class is smallest
+            classification[indices]=classkey
 
     return classification
 
-def run(output_folder=None,hsi_filename=None,refspectra="/users/rsg/mark1/codereview/SCOPS_processing/ref_spectra",filetype="ENVI"):
+def run(output_folder=None,hsi_filename=None,refspectra="/users/rsg/mark1/codereview/SCOPS_processing/ref_spectra/",filetype="ENVI",hsi_wavelengths=None):
     """
     function to run the spectral angle classifier
 
@@ -111,16 +114,84 @@ def run(output_folder=None,hsi_filename=None,refspectra="/users/rsg/mark1/codere
     outputfilename=os.path.join(output_folder,os.path.basename(os.path.splitext(hsi_filename)[0])+"_spectral_angle_classification.bsq")
     #list to save the spectra to - this will be stacked into a numpy array
     spectralist=[]
-    #loop through and load in each spectra to test against
-    filelist=glob.glob("{}/*.txt".format(refspectra))
-    for i,spectral_file in enumerate(filelist):
-        spectradata=numpy.genfromtxt(spectral_file,names=True)
-        spectralist.append(spectradata['spectra'])
-    spectra=numpy.vstack(spectralist)
+    spectra_id=[]
+
+    #try:
+        #if os.path.isdir(refspectra):
+            ##loop through and load in each spectra to test against
+            #filelist=glob.glob("{}/*.txt".format(refspectra))
+            #for i,spectral_file in enumerate(filelist):
+                #spectradata=numpy.genfromtxt(spectral_file,names=True)
+                #names=list(spectradata.dtype.names)
+                #for wavekey in ["Wavelength","wavelength"]:
+                    #try:
+                        #names.remove(wavekey)
+                    #except:
+                        #pass
+                #spectralist.append(spectradata[names])
+            #spectra=numpy.vstack(spectralist)
+            #spectra_id=filelist
+        #else:
+            ##open the gdal supported reference spectra file
+            #gdalfile=gdal.Open(refspectra)
+            ##get the number of spectra (bands) in the file
+            #number_of_bands=gdalfile.RasterCount
+            ##loop through each of the bands
+            #for i,band in enumerate(range(1,number_of_bands+1)):
+                #spectralist.append(gdalfile.GetRasterBand(band).ReadAsArray().astype(numpy.float32))
+            #spectra=numpy.vstack(spectralist)
+            #spectra_id=['ref_spectra{}'.format(i) for i in range(spectra.shape[0])]
+            #gdalfile=None
+    #except Exception as exc:
+        #raise Exception("Failed to read in reference spectra beacuse of {}".format(exc))
+
+
+
+    #get the wavelengths from the HSI file
+    if hsi_wavelengths is None:
+        hsi_wavelengths=[]
+        gdalfile=gdal.Open(hsi_filename)
+        number_of_bands=gdalfile.RasterCount
+        for b in range(number_of_bands):
+            band=gdalfile.GetRasterBand(b+1)
+            hsi_wavelengths.append(float(band.GetMetadataItem("Wavelength")))
+        gdalfile=None
+
+    #now resample the ref spectra to match the wavelengths of the hsi
+    #here we do not do a full resample - only a 1d interpolation. For wide-band data
+    #this will be less accurate and a resampling method based on response functions is recommended
+    try:
+        #loop through and load in each spectra to test against
+        spectradata=numpy.genfromtxt(refspectra,names=True)
+        names=list(spectradata.dtype.names)
+        for name in names:
+            new_spectra=[]
+            #skip the wavelengths
+            if name in ["wavelength"]:
+                continue
+            #need to interpolate wavelength to HSI wavelengths
+            for w in hsi_wavelengths:
+                if w > spectradata['wavelength'].max():
+                    #The reference spectra data do not go this high - set the resampled ref spectra to 0 here
+                    new_spectra.append(0)
+                else:
+                    new_spectra.append(numpy.interp(w,spectradata['wavelength'],spectradata[name]))
+            spectralist.append(numpy.array(new_spectra))
+            spectra_id.append(name)
+
+        spectra=numpy.vstack(spectralist)
+    except Exception as exc:
+        raise Exception("Failed to read in reference spectra beacuse of {}".format(exc))
 
     #now run the spectral angle calculation on the hyperspectral file
     angles=calculate_spectral_angle(hsi_filename,spectra)
     classification=create_classification_mask(angles)
+
+    I=numpy.where(classification>10)
+    for i in angles.keys():
+        print(i,angles[i][I])
+
+
     #write out the classification mask
     driver=gdal.GetDriverByName(filetype)
     try:
@@ -134,7 +205,7 @@ def run(output_folder=None,hsi_filename=None,refspectra="/users/rsg/mark1/codere
     #need to write the classes to meta data for future reference
     band=outfile.GetRasterBand(1)
     for i,key in enumerate(angles.keys()):
-        band.SetMetadataItem(str(key),os.path.basename(filelist[i]))
+        band.SetMetadataItem(str(key),os.path.basename(spectra_id[i]))
     outfile=None
 
     return outputfilename

@@ -24,7 +24,7 @@ COMMON_LOCATION = os.path.dirname(os.path.realpath(__file__))
 INSTALL_PREFIX = os.path.abspath(__file__)[:os.path.abspath(__file__).find("lib")]
 
 #forces processing to occur on the machine running the submission cron job
-FORCE_LOCAL = True
+FORCE_LOCAL = False
 
 #the location of the main processing executable
 PROCESS_COMMAND = os.path.abspath(os.path.join(COMMON_LOCATION, os.pardir,

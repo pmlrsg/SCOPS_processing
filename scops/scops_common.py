@@ -40,41 +40,41 @@ if not os.path.isfile(PROCESS_COMMAND):
 
 #the following are output folders, they shouldn't need to be changed and will all exist under the main processing folder
 #mask output location
-WEB_MASK_OUTPUT = "/level1b/"
+WEB_MASK_OUTPUT = "level1b/"
 
 #level1b folder relative to delivery
-LEV1_FOLDER = "/flightlines/level1b/"
+LEV1_FOLDER = "flightlines/level1b/"
 
 #igm output location
-WEB_IGM_OUTPUT = "/igm/"
+WEB_IGM_OUTPUT = "igm/"
 
 #mapped file output
-WEB_MAPPED_OUTPUT = "/mapped/"
+WEB_MAPPED_OUTPUT = "mapped/"
 
 #status file output
-STATUS_DIR = "/status/"
+STATUS_DIR = "status/"
 
 #error file dir, must be the same as status
-ERROR_DIR = "/status/"
+ERROR_DIR = "status/"
 
 #processing logs file, different to the main web app log folder!
-LOG_DIR = "/logs/"
+LOG_DIR = "logs/"
 
 #navigation files folder in the hyperspectral delivery
-NAVIGATION_FOLDER = "/flightlines/navigation/"
+NAVIGATION_FOLDER = "flightlines/navigation/"
 
 #delivery folder for hyperspectral within project
 #can use wildcards.
-HYPER_DELIVERY_FOLDER = "/delivery/*{}*/"
+HYPER_DELIVERY_FOLDER = "delivery/*{}*/"
 
 #core processing output location, workspaces are spawned here
 WEB_OUTPUT = "/users/rsg/arsf/web_processing/processing/"
 
 #main dem output folder
-WEB_DEM_FOLDER = "/dem/"
+WEB_DEM_FOLDER = "dem/"
 
 #status output folder
-WEB_STATUS_OUTPUT = "/status"
+WEB_STATUS_OUTPUT = "status"
 
 #first status, doesn't really matter what this is called
 INITIAL_STATUS = "initialising"

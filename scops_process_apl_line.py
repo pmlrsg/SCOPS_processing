@@ -39,6 +39,7 @@ from email.mime.text import MIMEText
 import platform
 import tempfile
 import shutil
+import atexit
 
 import threading
 import time
@@ -51,8 +52,56 @@ from scops import scops_common
 from arsf_dem import dem_common_functions
 import importlib
 
+def sensor_folder_lookup(sensor_letter):
+    if sensor_letter in "f":
+        sensor = "fenix"
+        folder_key = "hyperspectral"
+    elif sensor_letter in "h":
+        sensor = "hawk"
+        folder_key = "hyperspectral"
+    elif sensor_letter in "e":
+        sensor = "eagle"
+        folder_key = "hyperspectral"
+    elif sensor_letter in "o":
+        sensor = "owl"
+        folder_key = "owl"
+    else:
+        raise Exception("no compatible sensors found, check the input files naming convention beings with f, e, o or h.")
+    return folder_key
+
+class line_proc_details:
+    def __init__(self, processing_location, output_location, output_line_name, projection, is_tmp=False):
+        self.is_tmp = is_tmp
+        self.processing_location = processing_location
+        self.output_location = output_location
+        self.output_line_name = output_line_name
+        self.projection = projection
+        self.masked_file = os.path.join(processing_location, output_line_name + "_masked.bil")
+        self.igm_file = os.path.join(processing_location, output_line_name + ".igm")
+        self.mapname = os.path.join(processing_location, output_line_name + "3b_mapped.bil")
+        self.igm_file_transformed = self.igm_file.replace(".igm", "_{}.igm").format(projection.replace(' ', '_'))
+        self.final_masked_file = os.path.join(self.output_location, scops_common.WEB_MASK_OUTPUT, output_line_name + "_masked.bil")
+        self.final_igm_file = os.path.join(self.output_location, scops_common.WEB_IGM_OUTPUT, output_line_name + ".igm")
+        self.final_igm_file_transformed = self.final_igm_file.replace(".igm", "_{}.igm").format(projection.replace(' ', '_'))
+        self.final_mapname = os.path.join(self.output_location, scops_common.WEB_MAPPED_OUTPUT, output_line_name + "3b_mapped.bil")
+        self.zipname = self.mapname + ".zip"
+        self.final_zipname = self.final_mapname + ".zip"
+
 def status_to_number(status):
     return scops_common.STAGES.index(status)
+
+def writeback(processing_details):
+    print "Writeback called, sticking in {}".format(processing_details.output_location)
+    for key in processing_details.__dict__.keys():
+        print key, processing_details.__dict__[key]
+    outputs = [f.replace("final_", "") for f in processing_details.__dict__.keys() if "final_" in f]
+    for output in outputs:
+        final_output = "final_" + output
+        if os.path.isfile(processing_details.__dict__[output]):
+            shutil.move(processing_details.__dict__[output], processing_details.__dict__[final_output])
+    if processing_details.is_tmp:
+        shutil.rmtree(processing_details.processing_location)
+
 
 def send_email(message, receive, subject, sender, no_bcc=False, no_error=True):
     """
@@ -325,7 +374,6 @@ def line_handler(config_file, line_name, output_location, process_main_line, pro
     :param process_main_line:
     :param process_band_ratio:
     """
-    print resume
     if not os.path.isfile(config_file):
         raise IOError("Config file not found. Check {} is a valid file".format(config_file))
     #read the config
@@ -341,20 +389,7 @@ def line_handler(config_file, line_name, output_location, process_main_line, pro
     #set up folders
     jday = "{0:03d}".format(int(line_details["julianday"]))
 
-    if line_name[:1] in "f":
-        sensor = "fenix"
-        folder_key = "hyperspectral"
-    elif line_name[:1] in "h":
-        sensor = "hawk"
-        folder_key = "hyperspectral"
-    elif line_name[:1] in "e":
-        sensor = "eagle"
-        folder_key = "hyperspectral"
-    elif line_name[:1] in "o":
-        sensor = "owl"
-        folder_key = "owl"
-    else:
-        raise Exception("no compatible sensors found, check the input files naming convention beings with f, e, o or h.")
+    folder_key = sensor_folder_lookup(line_name[:1])
 
     delivery_folder = scops_common.HYPER_DELIVERY_FOLDER.format(folder_key)
 
@@ -363,7 +398,7 @@ def line_handler(config_file, line_name, output_location, process_main_line, pro
         sortie = ''
     folder = line_details['sourcefolder']
     try:
-        hyper_delivery = glob.glob(folder + delivery_folder)[0]
+        hyper_delivery = glob.glob(os.path.join(folder, delivery_folder))[0]
     except IndexError:
         raise Exception("Could not find hyperspectral delivery folder. Tried "
                         "'{}'".format(folder + delivery_folder))
@@ -427,7 +462,7 @@ def line_handler(config_file, line_name, output_location, process_main_line, pro
 
 
 
-def process_web_hyper_line(config, base_line_name, output_line_name, band_list, output_location, lev1file, hyper_delivery, input_lev1_file=None, skip_stages=[], maskfile=None, data_type="float32", eq_name=None, last_process=False, tmp=False, resume=False):
+def process_web_hyper_line(config, base_line_name, output_line_name, band_list, output_location, lev1file, hyper_delivery, input_lev1_file=None, skip_stages=[], maskfile=None, data_type="float32", eq_name=None, last_process=False, tmp=False, resume=True):
     """
     Main function, takes a line and processes it through APL, generates a log file for each line with the output from APL
 
@@ -439,14 +474,13 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
     :param output_location:
     :return:
     """
-
     #set up logging
     logger = logging.getLogger()
     output_line_name, _, _ = output_line_name.replace(".","").replace("bil", "").rpartition("1b")
     logstat_name = output_line_name.replace("1b.bil","")
     if eq_name:
         logstat_name = logstat_name +"_"+ eq_name
-    logfile = output_location + scops_common.LOG_DIR + logstat_name + "_log.txt"
+    logfile = os.path.join(output_location, scops_common.LOG_DIR, logstat_name + "_log.txt")
     if os.path.isfile(logfile):
         os.remove(logfile)
     file_handler = logging.FileHandler(logfile, mode='a')
@@ -465,14 +499,13 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
     #get the line section we want
     line_details = dict(config.items(base_line_name))
     status_file = scops_common.STATUS_FILE.format(output_location, logstat_name)
-
     #set processing id for database things
     processing_id = os.path.basename(line_details["output_folder"])
 
     #set our first status
     open(status_file, 'w+').write("{} = {}".format(logstat_name,  scops_common.INITIAL_STATUS))
     output_line_name = logstat_name
-
+    
     if not resume:
         link = scops_common.LINE_LINK.format(processing_id, output_line_name, line_details["project_code"])
         status_db.insert_line_into_db(processing_id, output_line_name, "Waiting to process", 0, 0, 0, 0, link, 0, 0)
@@ -485,7 +518,7 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
         progress_thread.start()
     except Exception as e:
         print e
-
+    
     if resume:
         resume_stage = status_db.get_line_status_from_db(processing_id, output_line_name)[0]
         start_stage = status_to_number(resume_stage)
@@ -543,17 +576,20 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
         igm_file = os.path.join(tempdir, base_line_name + ".igm")
         mapname = os.path.join(tempdir, output_line_name + "3b_mapped.bil")
         igm_file_transformed = igm_file.replace(".igm", "_{}.igm").format(projection.replace(' ', '_'))
-        final_masked_file = output_location + scops_common.WEB_MASK_OUTPUT + output_line_name.replace(".bil","") + "_masked.bil"
-        final_igm_file = output_location + scops_common.WEB_IGM_OUTPUT + base_line_name + ".igm"
+        final_masked_file = os.path.join(output_location, scops_common.WEB_MASK_OUTPUT, output_line_name.replace(".bil","") + "_masked.bil")
+        final_igm_file = os.path.join(output_location, scops_common.WEB_IGM_OUTPUT, base_line_name + ".igm")
         final_igm_file_transformed = final_igm_file.replace(".igm", "_{}.igm").format(projection.replace(' ', '_'))
-        final_mapname = output_location + scops_common.WEB_MAPPED_OUTPUT +output_line_name + "3b_mapped.bil"
+        final_mapname = os.path.join(output_location, scops_common.WEB_MAPPED_OUTPUT, output_line_name + "3b_mapped.bil")
     else:
-        masked_file = output_location + scops_common.WEB_MASK_OUTPUT + output_line_name.replace(".bil","") + "_masked.bil"
-        igm_file = output_location + scops_common.WEB_IGM_OUTPUT + base_line_name + ".igm"
-        mapname = output_location + scops_common.WEB_MAPPED_OUTPUT +output_line_name + "3b_mapped.bil"
+        masked_file = os.path.join(output_location, scops_common.WEB_MASK_OUTPUT, output_line_name.replace(".bil","") + "_masked.bil")
+        igm_file = os.path.join(output_location, scops_common.WEB_IGM_OUTPUT, base_line_name + ".igm")
+        mapname = os.path.join(output_location, scops_common.WEB_MAPPED_OUTPUT, output_line_name + "3b_mapped.bil")
 
+    line_processing_details = line_proc_details(tempdir,output_location,output_line_name,projection,is_tmp=tmp)
 
-    if  "masking" not in skip_stages and start_stage <= 1:
+    atexit.register(writeback, line_processing_details)
+    
+    if not "masking" in skip_stages or start_stage <= 1:
         #set new status to masking
         status_update(processing_id, status_file, "aplmask", output_line_name)
         if not 'none' in line_details['masking']:
@@ -664,6 +700,7 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
             logger.error([e,output_line_name])
             raise Exception(e)
 
+    sys.exit()
     status_update(processing_id, status_file, "waiting to zip", output_line_name)
 
     waiting = True
@@ -701,12 +738,7 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
     if tmp:
         if scops_common.DEBUG_FILE_WRITEBACK:
             logger.info("debug writeback requested, copy time will be increased!")
-            shutil.move(masked_file, final_masked_file)
-            shutil.move(masked_file + ".hdr", final_masked_file + ".hdr")
-            shutil.move(igm_file, final_igm_file)
-            shutil.move(igm_file+ ".hdr", final_igm_file + ".hdr")
-            shutil.move(igm_file_transformed, final_igm_file_transformed)
-            shutil.move(igm_file_transformed+ ".hdr", final_igm_file_transformed + ".hdr")
+            writeback(line_processing_details)
         shutil.move(mapname + ".zip", final_mapname + ".zip")
         shutil.rmtree(tempdir)
 

@@ -152,25 +152,9 @@ def web_qsub(config, job_submission_system="local", output=None):
                                                   absolute=True)
         sourcefolder = folder.getProjPath()
 
-    if lines[0][:1] in "f":
-        sensor = "fenix"
-        folder_key = "hyperspectral"
-    elif lines[0][:1] in "h":
-        sensor = "hawk"
-        folder_key = "hyperspectral"
-    elif lines[0][:1] in "e":
-        sensor = "eagle"
-        folder_key = "hyperspectral"
-    elif lines[0][:1] in "o":
-        sensor = "owl"
-        folder_key = "owl"
-    else:
-        raise Exception("no compatible sensors found, check the input files naming convention beings with f, e, o or h.")
-
-
+    folder_key = scops_process_apl_line.sensor_folder_lookup(lines[0][:1])
     #locate delivery and navigation files
-    print(sourcefolder,scops_common.HYPER_DELIVERY_FOLDER)
-    hyper_delivery = glob.glob(sourcefolder + scops_common.HYPER_DELIVERY_FOLDER.format(folder_key))[0]
+    hyper_delivery = glob.glob(os.path.join(sourcefolder, scops_common.HYPER_DELIVERY_FOLDER.format(folder_key)))[0]
     nav_folder = glob.glob(os.path.join(hyper_delivery,
                                         "flightlines/navigation/"))[0]
 

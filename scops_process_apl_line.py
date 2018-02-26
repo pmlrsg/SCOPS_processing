@@ -53,6 +53,13 @@ from arsf_dem import dem_common_functions
 import importlib
 
 def sensor_folder_lookup(sensor_letter):
+    """
+    Give a sensor letter prefix will return a folder descriptor for delivery folder lookup
+
+    :param sensor_letter: string
+    :return: folder_key
+    :rtype: string
+    """
     if sensor_letter in "f":
         sensor = "fenix"
         folder_key = "hyperspectral"
@@ -70,6 +77,10 @@ def sensor_folder_lookup(sensor_letter):
     return folder_key
 
 class line_proc_details:
+    """
+    A holder class for line/file details. Also handles writeback from temporary processing on success/failure
+    """
+
     def __init__(self, processing_location, output_location, output_line_name, projection, is_tmp=False):
         self.is_tmp = is_tmp
         self.processing_location = processing_location
@@ -91,9 +102,15 @@ def status_to_number(status):
     return scops_common.STAGES.index(status)
 
 def writeback(processing_details):
-    print "Writeback called, sticking in {}".format(processing_details.output_location)
+    """
+    Tries to shift all our produced files to the output folder, quietly fails.
+
+    :param processing_details: line_proc_details
+    :return: None
+    """
+    logger.info("Writeback called, sticking in {}".format(processing_details.output_location))
     for key in processing_details.__dict__.keys():
-        print key, processing_details.__dict__[key]
+        logger.info(key, processing_details.__dict__[key])
     outputs = [f.replace("final_", "") for f in processing_details.__dict__.keys() if "final_" in f]
     for output in outputs:
         final_output = "final_" + output
@@ -106,6 +123,14 @@ def writeback(processing_details):
 def send_email(message, receive, subject, sender, no_bcc=False, no_error=True):
     """
     Sends an email using smtplib
+
+    :param message: string
+    :param receive: string (email)
+    :param subject: string
+    :param sender: string (email)
+    :param no_bcc: bool
+    :param no_error: bool
+    :return: None
     """
     msg = MIMEText(message)
     msg['From'] = sender
@@ -126,31 +151,49 @@ def send_email(message, receive, subject, sender, no_bcc=False, no_error=True):
             response = mailer.sendmail(sender, recipient, msg.as_string())
             mailer.close()
     except Exception as e:
-        print str(e)
+        logger.error(str(e))
         raise Exception(e)
 
 def progress_detail_updater_spinner(processing_id, output_folder, logfile, line):
     """
-    Updates the database with the current status/progress of ouir processing by interpretting the logs every second
+    Updates the database with the current status/progress of our processing by interpretting the logs every second.
+    Should be run in a seperate thread.
+
+    :param processing_id: string
+    :param output_folder: string
+    :param logfile: string
+    :param line: string
     """
     complete = False
     iter = 0
     while not complete:
+        #find out our current status
         status = status_db.get_line_status_from_db(processing_id, line)[0]
         try:
+            #try to update the status database with progress
             progress_detail_updater(processing_id, output_folder, logfile, line, status)
         except Exception as e:
-            print e
+            #If we fail we shouldn't panic as the system will still work, but should say something about it
+            logger.error(e)
         if status == "complete":
             complete = True
         if "ERROR" in status:
+            #time for this to stop running
             complete = True
         iter += 1
+        #give it some time to see if anything changes
         time.sleep(1)
 
 def progress_detail_updater(processing_id, output_folder, logfile, line, status):
     """
     A big switch to work out what the log means at any point, vital for the updating of the database.
+
+    :param processing_id: string
+    :param output_folder: string
+    :param logfile: string
+    :param line: string
+    :param status: string
+    :return: None
     """
     zipfile_name = os.path.join(output_folder, 'mapped', os.path.basename(line) + "3b_mapped.bil.zip")
 
@@ -331,6 +374,16 @@ def email_status(pi_email, output_location, project):
     send_email(message, pi_email, output_location + " order processing", scops_common.SEND_EMAIL)
 
 def email_preprocessing_error(pi_email, output_location, project, reason):
+    """
+    Sends an email to update the user that their data has begun processing but
+    the DEM is not compatible. This problem will require input from both the user
+    and an operator.
+
+    :param pi_email:
+    :param output_location:
+    :param project:
+    :param reason:
+    """
     output_location = os.path.basename(os.path.normpath(output_location))
     if reason is 'dem_coverage':
         message="This is to notify you that your NERC-ARF data order has encountered an error. " \
@@ -423,7 +476,6 @@ def line_handler(config_file, line_name, output_location, process_main_line, pro
             if config.get(line_name, eq_name) in "True":
                 equation = config.get('DEFAULT', eq_name)
                 band_numbers = re.findall(r'band(\d{1,3})', equation)
-                print(band_numbers)
                 output_location_updated = output_location + "/level1b"
                 bm_file, bands = scops_bandmath.bandmath(lev1file, equation, output_location_updated, band_numbers, eqname=eq_name.replace("eq_", ""), maskfile=maskfile, badpix_mask=badpix_mask)
                 if bands > 1:
@@ -517,7 +569,7 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
         progress_thread.daemon = True
         progress_thread.start()
     except Exception as e:
-        print e
+        logger.error(e)
     
     if resume:
         resume_stage = status_db.get_line_status_from_db(processing_id, output_line_name)[0]

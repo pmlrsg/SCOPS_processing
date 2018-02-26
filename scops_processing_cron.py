@@ -14,6 +14,8 @@ Available functions
 main(): finds all config files and tests them for submission requirements.
 """
 
+from __future__ import print_function
+
 import sys
 if sys.version_info[0] < 3:
     import ConfigParser
@@ -33,7 +35,7 @@ def main():
     """
     for configfile in os.listdir(scops_common.WEB_CONFIG_DIR):
         #assume we want to submit stuff until we find evidence to the contrary
-        print configfile
+        print(configfile)
         if ".cfg" not in configfile[-4:]:
             continue
         submit = True
@@ -69,7 +71,7 @@ def main():
 
         if submit:
             #finally submit the jobs
-            print scops_common.QSUB_COMMAND
+            print(scops_common.QSUB_COMMAND)
             qsub = [scops_common.QSUB_COMMAND]
             qsub.extend(["-c", "{}/{}".format(scops_common.WEB_CONFIG_DIR, configfile)])
             if scops_common.FORCE_LOCAL:

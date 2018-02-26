@@ -47,7 +47,7 @@ class LocalJobSubmission(JobSubmission):
             scops_process_apl_line.line_handler(config, line, output_location,
                                               main_line, band_ratio)
         except Exception as e:
-            print e
+            self.logger.error(e)
             self.logger.error("Could not process job for {}, "
                               "Reason: {}".format(line, e))
 

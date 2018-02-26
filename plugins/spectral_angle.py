@@ -10,6 +10,8 @@ import os
 import collections
 import argparse
 
+nodata=2**16-1
+
 def calculate_spectral_angle(hsi_filename,spectra):
     """
     Run a spectral angle classification on a hyperspectral file (hsi_filename) using reference spectra
@@ -61,10 +63,14 @@ def calculate_spectral_angle(hsi_filename,spectra):
 
 def create_classification_mask(angles):
     """
+    Create the classification mask.
+    Input is a dictionary of spectral angles (as output from calculate_spectral_angle).
+    The keys should be 0, 1, 2, ... for as many reference spectra used.
+    Output is the classification mask array.
     """
 
     #now to generate the classification mask - and set to max value
-    classification=numpy.ones(angles[1].shape)*(2**16-1)
+    classification=numpy.ones(angles[1].shape)*(nodata)
     #the scalar to convert indices to floating point
     scalar=10**numpy.ceil(numpy.log10(angles[1].shape[1]))
     #for each of the classes (test spectra)
@@ -98,17 +104,17 @@ def create_classification_mask(angles):
 
     return classification
 
-def run(output_folder=None,hsi_filename=None,refspectra="/users/rsg/mark1/codereview/SCOPS_processing/ref_spectra/",filetype="ENVI",hsi_wavelengths=None):
+def run(output_folder=None,hsi_filename=None,refspectra="/users/rsg/mark1/codereview/SCOPS_processing/ref_spectra/ref_spectra.txt",filetype="ENVI",hsi_wavelengths=None):
     """
-    function to run the spectral angle classifier
+    Function to run the spectral angle classifier. This is the one that is called from SCOPS processor.
 
     inputs:
-        output_folder=None,
-        hsi_filename=None,
-        refspectra="/users/rsg/mark1/codereview/SCOPS_processing/ref_spectra",
-        filetype="ENVI"
+        output_folder = directory to write to.
+        hsi_filename = hyperspectral bil file to classify.
+        refspectra = reference spectra ASCII file.
+        filetype = file type to write to.
     returns:
-        outputfilename - filename of classification written to disk
+        outputfilename - filename of classification written to disk.
     """
     outputfilename=os.path.join(output_folder,os.path.basename(os.path.splitext(hsi_filename)[0])+"_spectral_angle_classification.bsq")
     #list to save the spectra to - this will be stacked into a numpy array
@@ -174,6 +180,7 @@ def run(output_folder=None,hsi_filename=None,refspectra="/users/rsg/mark1/codere
     band=outfile.GetRasterBand(1)
     for i,key in enumerate(angles.keys()):
         band.SetMetadataItem(str(key),os.path.basename(spectra_id[i]))
+    band.SetNoDataValue(nodata)
     outfile=None
 
     return outputfilename
@@ -183,17 +190,17 @@ if __name__=="__main__":
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--output_folder',
                         '-o',
-                        help='output folder',
+                        help='Output folder to write to',
                         default=None,
                         metavar="<output_folder>")
     parser.add_argument('hsifilename',
-                        help='bil file to run on',
+                        help='Hyperspectral bil file to classify',
                         default=None,
                         metavar="<hsi_filename>")
     parser.add_argument('--refspectra',
-                        help='directory containing reference spectra',
-                        default="/users/rsg/mark1/codereview/SCOPS_processing/ref_spectra",
-                        metavar="<directory>")
+                        help='ASCII file containing reference spectra as space separated columns. First column should be "wavelength" all others should be the spectra intensity.',
+                        default=os.path.join(os.path.dirname(__file__),"ref_spectra/ref_spectra.txt"),
+                        metavar="<filename>")
     args = parser.parse_args()
 
 

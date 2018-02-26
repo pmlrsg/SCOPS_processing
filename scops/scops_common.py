@@ -154,6 +154,12 @@ TEMP_PROCESSING = True
 #If true forces all processing files to be written back to the workspace dirs
 DEBUG_FILE_WRITEBACK = False
 
+DB_LOCATION = os.path.join(os.path.dirname(__file__), "scops_status_db.db")
+
+USE_DB = True
+
+STAGES = ['aplmask','aplcorr','apltran','aplmap','zipping']
+
 # Now go through all variables and check if they should be overwritten
 # by an environmental variable of the same name.
 for env_var in dir():
@@ -177,9 +183,7 @@ for env_var in dir():
 if TEMP_PROCESSING_DIR == "":
     #whether to process on local file system of gridnodes
     TEMP_PROCESSING = False
-   
-USE_DB = True
 
-DB_LOCATION = os.path.join(os.path.dirname(__file__), "scops_status_db.db")
-
-STAGES = ['aplmask','aplcorr','apltran','aplmap','zipping']
+if DB_LOCATION == "":
+    #whether to append outputs to a database
+    USE_DB = False

@@ -62,12 +62,12 @@ def web_structure(project_code, jday, year, sortie=None, output_name=None):
     #make the folders
     if os.access(scops_common.WEB_OUTPUT, os.W_OK):
         os.mkdir(folder_base)
-        os.mkdir(folder_base + scops_common.WEB_MASK_OUTPUT)
-        os.mkdir(folder_base + scops_common.WEB_IGM_OUTPUT)
-        os.mkdir(folder_base + scops_common.WEB_MAPPED_OUTPUT)
-        os.mkdir(folder_base + scops_common.WEB_DEM_FOLDER)
-        os.mkdir(folder_base + scops_common.WEB_STATUS_OUTPUT)
-        os.mkdir(folder_base + scops_common.LOG_DIR)
+        os.mkdir(os.path.join(folder_base , scops_common.WEB_MASK_OUTPUT))
+        os.mkdir(os.path.join(folder_base , scops_common.WEB_IGM_OUTPUT))
+        os.mkdir(os.path.join(folder_base , scops_common.WEB_MAPPED_OUTPUT))
+        os.mkdir(os.path.join(folder_base , scops_common.WEB_DEM_FOLDER))
+        os.mkdir(os.path.join(folder_base , scops_common.WEB_STATUS_OUTPUT))
+        os.mkdir(os.path.join(folder_base , scops_common.LOG_DIR))
     else:
         raise IOError("no write permissions at {}".format(scops_common.WEB_OUTPUT))
     #return the location
@@ -173,7 +173,7 @@ def web_qsub(config, job_submission_system="local", output=None):
             config_file.set('DEFAULT', "has_error", "True")
             raise Exception("The DEM provided does not exist, entering an error state")
         else:
-            dem_name = (output_location + scops_common.WEB_DEM_FOLDER + defaults["project_code"] + '_' + defaults["year"] + '_' + defaults[
+            dem_name = os.path.join(output_location , scops_common.WEB_DEM_FOLDER , defaults["project_code"] + '_' + defaults["year"] + '_' + defaults[
                "julianday"] + '_' + defaults["projection"] + ".dem").replace(' ', '_')
             arsf_dem.dem_nav_utilities.create_apl_dem_from_mosaic(dem_name,
                                                          dem_source=defaults["dem"],

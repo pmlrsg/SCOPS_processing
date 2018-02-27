@@ -52,6 +52,9 @@ from scops import scops_common
 from arsf_dem import dem_common_functions
 import importlib
 
+#set up logging
+logger = logging.getLogger()
+
 def sensor_folder_lookup(sensor_letter):
     """
     Give a sensor letter prefix will return a folder descriptor for delivery folder lookup
@@ -88,13 +91,21 @@ class line_proc_details:
         self.output_line_name = output_line_name
         self.projection = projection
         self.masked_file = os.path.join(processing_location, output_line_name + "_masked.bil")
+        self.masked_file_hdr = os.path.join(processing_location, output_line_name + "_masked.bil.hdr")
         self.igm_file = os.path.join(processing_location, output_line_name + ".igm")
+        self.igm_file_hdr = os.path.join(processing_location, output_line_name + ".igm.hdr")
         self.mapname = os.path.join(processing_location, output_line_name + "3b_mapped.bil")
+        self.mapname_hdr = os.path.join(processing_location, output_line_name + "3b_mapped.bil.hdr")
         self.igm_file_transformed = self.igm_file.replace(".igm", "_{}.igm").format(projection.replace(' ', '_'))
+        self.igm_file_transformed_hdr = self.igm_file.replace(".igm.hdr", "_{}.igm.hdr").format(projection.replace(' ', '_'))
         self.final_masked_file = os.path.join(self.output_location, scops_common.WEB_MASK_OUTPUT, output_line_name + "_masked.bil")
+        self.final_masked_file_hdr = os.path.join(self.output_location, scops_common.WEB_MASK_OUTPUT, output_line_name + "_masked.bil.hdr")
         self.final_igm_file = os.path.join(self.output_location, scops_common.WEB_IGM_OUTPUT, output_line_name + ".igm")
+        self.final_igm_file_hdr = os.path.join(self.output_location, scops_common.WEB_IGM_OUTPUT, output_line_name + ".igm.hdr")
         self.final_igm_file_transformed = self.final_igm_file.replace(".igm", "_{}.igm").format(projection.replace(' ', '_'))
+        self.final_igm_file_transformed_hdr = self.final_igm_file.replace(".igm.hdr", "_{}.igm.hdr").format(projection.replace(' ', '_'))
         self.final_mapname = os.path.join(self.output_location, scops_common.WEB_MAPPED_OUTPUT, output_line_name + "3b_mapped.bil")
+        self.final_mapname = os.path.join(self.output_location, scops_common.WEB_MAPPED_OUTPUT, output_line_name + "3b_mapped.bil.hdr")
         self.zipname = self.mapname + ".zip"
         self.final_zipname = self.final_mapname + ".zip"
 
@@ -110,7 +121,7 @@ def writeback(processing_details):
     """
     logger.info("Writeback called, sticking in {}".format(processing_details.output_location))
     for key in processing_details.__dict__.keys():
-        logger.info(key, processing_details.__dict__[key])
+        logger.info([key , processing_details.__dict__[key]])
     outputs = [f.replace("final_", "") for f in processing_details.__dict__.keys() if "final_" in f]
     for output in outputs:
         final_output = "final_" + output
@@ -526,8 +537,10 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
     :param output_location:
     :return:
     """
-    #set up logging
-    logger = logging.getLogger()
+
+    #if output_location is missing a trailing slash - add it on
+    output_location=os.path.join(output_location, '')
+
     output_line_name, _, _ = output_line_name.replace(".","").replace("bil", "").rpartition("1b")
     logstat_name = output_line_name.replace("1b.bil","")
     if eq_name:
@@ -752,7 +765,6 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
             logger.error([e,output_line_name])
             raise Exception(e)
 
-    sys.exit()
     status_update(processing_id, status_file, "waiting to zip", output_line_name)
 
     waiting = True
@@ -778,6 +790,7 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
             zip.close()
             zip_created = True
     except Exception as e:
+        logger.error(e)
         zip_created = False
 
     if zip_created:

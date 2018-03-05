@@ -886,6 +886,6 @@ if __name__ == '__main__':
                         '-r',
                         help="Try to pick up where we left off",
                         action="store_true",
-                        dest="noresume")
+                        dest="resume")
     args = parser.parse_args()
     line_handler(args.config, args.line, args.output, args.main, args.bandmath, resume=args.resume)

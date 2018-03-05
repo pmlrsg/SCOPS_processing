@@ -72,7 +72,7 @@ def get_line_status_from_db(processing_id, line_name):
     line = c.fetchone()
     conn.commit()
     c.close()
-    return line
+    return line[0]
 
 def update_status(processing_id, line, status):
     """

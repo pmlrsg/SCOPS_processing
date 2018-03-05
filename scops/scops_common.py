@@ -158,7 +158,7 @@ DB_LOCATION = os.path.join(os.path.dirname(__file__), "scops_status_db.db")
 
 USE_DB = True
 
-STAGES = ['Waiting to process','aplmask','aplcorr','apltran','aplmap','zipping']
+STAGES = ['Waiting to process','aplmask','aplcorr','apltran','aplmap','zipping', 'complete']
 
 # Now go through all variables and check if they should be overwritten
 # by an environmental variable of the same name.

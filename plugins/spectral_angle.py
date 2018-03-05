@@ -104,7 +104,7 @@ def create_classification_mask(angles):
 
     return classification
 
-def run(output_folder=None,hsi_filename=None,refspectra="/users/rsg/mark1/codereview/SCOPS_processing/ref_spectra/ref_spectra.txt",filetype="ENVI",hsi_wavelengths=None):
+def run(output_folder=None,hsi_filename=None,refspectra=None,filetype="ENVI",hsi_wavelengths=None):
     """
     Function to run the spectral angle classifier. This is the one that is called from SCOPS processor.
 
@@ -116,6 +116,10 @@ def run(output_folder=None,hsi_filename=None,refspectra="/users/rsg/mark1/codere
     returns:
         outputfilename - filename of classification written to disk.
     """
+
+    if refspectra is None:
+        raise Exception("Need to pass the reference spectra file.")
+
     outputfilename=os.path.join(output_folder,os.path.basename(os.path.splitext(hsi_filename)[0])+"_spectral_angle_classification.bsq")
     #list to save the spectra to - this will be stacked into a numpy array
     spectralist=[]

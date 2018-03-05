@@ -128,7 +128,10 @@ def writeback(processing_details):
         if os.path.isfile(processing_details.__dict__[output]):
             shutil.move(processing_details.__dict__[output], processing_details.__dict__[final_output])
     if processing_details.is_tmp:
-        shutil.rmtree(processing_details.processing_location)
+        try:
+            shutil.rmtree(processing_details.processing_location)
+        except:
+            pass
 
 
 def send_email(message, receive, subject, sender, no_bcc=False, no_error=True):
@@ -521,7 +524,7 @@ def line_handler(config_file, line_name, output_location, process_main_line, pro
                 skip_stages=['masking']
                 if enum == len(plugins)-1:
                     last_process = True
-                process_web_hyper_line(config, line_name, os.path.basename(processed_file), band_list, output_location, lev1file, hyper_delivery, input_lev1_file=processed_file, skip_stages=skip_stages,maskfile=None, eq_name=polite_plugin_name, last_process=last_process, tmp=tmp_process)
+                process_web_hyper_line(config, line_name, os.path.basename(processed_file), band_list, output_location, lev1file, hyper_delivery, input_lev1_file=processed_file, skip_stages=skip_stages,maskfile=None, eq_name=polite_plugin_name, last_process=last_process, tmp=tmp_process, resume=False)
 
 
 

@@ -179,7 +179,7 @@ def progress_detail_updater_spinner(processing_id, output_folder, logfile, line)
     iter = 0
     while not complete:
         #find out our current status
-        status = status_db.get_line_status_from_db(processing_id, line)[0]
+        status = status_db.get_line_status_from_db(processing_id, line)
         try:
             #try to update the status database with progress
             progress_detail_updater(processing_id, output_folder, logfile, line, status)
@@ -585,7 +585,7 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
         logger.error(e)
     
     if resume:
-        resume_stage = status_db.get_line_status_from_db(processing_id, output_line_name)[0]
+        resume_stage = status_db.get_line_status_from_db(processing_id, output_line_name)
         start_stage = status_to_number(resume_stage)
     else:
         start_stage = 0

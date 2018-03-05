@@ -128,7 +128,10 @@ def writeback(processing_details):
         if os.path.isfile(processing_details.__dict__[output]):
             shutil.move(processing_details.__dict__[output], processing_details.__dict__[final_output])
     if processing_details.is_tmp:
-        shutil.rmtree(processing_details.processing_location)
+        try:
+            shutil.rmtree(processing_details.processing_location)
+        except:
+            pass
 
 
 def send_email(message, receive, subject, sender, no_bcc=False, no_error=True):
@@ -179,7 +182,7 @@ def progress_detail_updater_spinner(processing_id, output_folder, logfile, line)
     iter = 0
     while not complete:
         #find out our current status
-        status = status_db.get_line_status_from_db(processing_id, line)[0]
+        status = status_db.get_line_status_from_db(processing_id, line)
         try:
             #try to update the status database with progress
             progress_detail_updater(processing_id, output_folder, logfile, line, status)
@@ -521,7 +524,7 @@ def line_handler(config_file, line_name, output_location, process_main_line, pro
                 skip_stages=['masking']
                 if enum == len(plugins)-1:
                     last_process = True
-                process_web_hyper_line(config, line_name, os.path.basename(processed_file), band_list, output_location, lev1file, hyper_delivery, input_lev1_file=processed_file, skip_stages=skip_stages,maskfile=None, eq_name=polite_plugin_name, last_process=last_process, tmp=tmp_process)
+                process_web_hyper_line(config, line_name, os.path.basename(processed_file), band_list, output_location, lev1file, hyper_delivery, input_lev1_file=processed_file, skip_stages=skip_stages,maskfile=None, eq_name=polite_plugin_name, last_process=last_process, tmp=tmp_process, resume=False)
 
 
 
@@ -573,7 +576,10 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
     
     if not resume:
         link = scops_common.LINE_LINK.format(processing_id, output_line_name, line_details["project_code"])
-        status_db.insert_line_into_db(processing_id, output_line_name, "Waiting to process", 0, 0, 0, 0, link, 0, 0)
+        try:
+            status_db.insert_line_into_db(processing_id, output_line_name, "Waiting to process", 0, 0, 0, 0, link, 0, 0)
+        except:
+            pass
         #in case we've already run it once
         status_update(processing_id, status_file, "Waiting to process", output_line_name)
     try:
@@ -585,7 +591,11 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
         logger.error(e)
     
     if resume:
-        resume_stage = status_db.get_line_status_from_db(processing_id, output_line_name)[0]
+        try:
+            resume_stage = status_db.get_line_status_from_db(processing_id, output_line_name)
+        except:
+            link = scops_common.LINE_LINK.format(processing_id, output_line_name, line_details["project_code"])
+            status_db.insert_line_into_db(processing_id, output_line_name, "Waiting to process", 0, 0, 0, 0, link, 0, 0)
         start_stage = status_to_number(resume_stage)
     else:
         start_stage = 0
@@ -875,10 +885,10 @@ if __name__ == '__main__':
                         help='process main line',
                         action="store_true",
                         dest="bandmath")
-    parser.add_argument('--noresume',
-                        '-n',
-                        help="don't try to pick up where we left off",
+    parser.add_argument('--resume',
+                        '-r',
+                        help="Try to pick up where we left off",
                         action="store_true",
-                        dest="noresume")
+                        dest="resume")
     args = parser.parse_args()
-    line_handler(args.config, args.line, args.output, args.main, args.bandmath, resume=(not args.noresume))
+    line_handler(args.config, args.line, args.output, args.main, args.bandmath, resume=args.resume)

@@ -27,6 +27,7 @@ def insert_line_into_db(processing_id, name, stage, progress, filesize, bytesize
     :param zipsize: int
     :param zipbyte: string
     """
+    print "inserting {}".format(name)
     conn = sqlite3.connect(scops_common.DB_LOCATION)
     c = conn.cursor()
     c.execute('INSERT INTO flightlines VALUES (NULL,?,?,?,?,?,?,?,?,?,?)', [processing_id,
@@ -71,7 +72,7 @@ def get_line_status_from_db(processing_id, line_name):
     line = c.fetchone()
     conn.commit()
     c.close()
-    return line
+    return line[0]
 
 def update_status(processing_id, line, status):
     """

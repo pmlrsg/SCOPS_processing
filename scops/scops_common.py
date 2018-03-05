@@ -40,41 +40,41 @@ if not os.path.isfile(PROCESS_COMMAND):
 
 #the following are output folders, they shouldn't need to be changed and will all exist under the main processing folder
 #mask output location
-WEB_MASK_OUTPUT = "/level1b/"
+WEB_MASK_OUTPUT = "level1b/"
 
 #level1b folder relative to delivery
-LEV1_FOLDER = "/flightlines/level1b/"
+LEV1_FOLDER = "flightlines/level1b/"
 
 #igm output location
-WEB_IGM_OUTPUT = "/igm/"
+WEB_IGM_OUTPUT = "igm/"
 
 #mapped file output
-WEB_MAPPED_OUTPUT = "/mapped/"
+WEB_MAPPED_OUTPUT = "mapped/"
 
 #status file output
-STATUS_DIR = "/status/"
+STATUS_DIR = "status/"
 
 #error file dir, must be the same as status
-ERROR_DIR = "/status/"
+ERROR_DIR = "status/"
 
 #processing logs file, different to the main web app log folder!
-LOG_DIR = "/logs/"
+LOG_DIR = "logs/"
 
 #navigation files folder in the hyperspectral delivery
-NAVIGATION_FOLDER = "/flightlines/navigation/"
+NAVIGATION_FOLDER = "flightlines/navigation/"
 
 #delivery folder for hyperspectral within project
 #can use wildcards.
-HYPER_DELIVERY_FOLDER = "/delivery/*hyperspectral*/"
+HYPER_DELIVERY_FOLDER = "delivery/*{}*/"
 
 #core processing output location, workspaces are spawned here
 WEB_OUTPUT = "/users/rsg/arsf/web_processing/processing/"
 
 #main dem output folder
-WEB_DEM_FOLDER = "/dem/"
+WEB_DEM_FOLDER = "dem/"
 
 #status output folder
-WEB_STATUS_OUTPUT = "/status"
+WEB_STATUS_OUTPUT = "status"
 
 #first status, doesn't really matter what this is called
 INITIAL_STATUS = "initialising"
@@ -91,8 +91,12 @@ OSNG_SEPERATION_FILE = "/users/rsg/arsf/dems/ostn02/OSTN02_NTv2.gsb"
 SERVER_BASE = 'https://nerc-arf-dan.pml.ac.uk'
 
 
+
 #both these link variables need to be updated to the main processor URL
 DOWNLOAD_LINK = SERVER_BASE + '/processor/downloads/{}?&project={}'
+
+#line link - used for individual line downloads
+LINE_LINK = SERVER_BASE + '/processor/downloads/{}/{}?&project={}'
 
 #http location to access the status page
 STATUS_LINK = SERVER_BASE +'/processor/status/{}?&project={}'
@@ -150,6 +154,12 @@ TEMP_PROCESSING = True
 #If true forces all processing files to be written back to the workspace dirs
 DEBUG_FILE_WRITEBACK = False
 
+DB_LOCATION = os.path.join(os.path.dirname(__file__), "scops_status_db.db")
+
+USE_DB = True
+
+STAGES = ['aplmask','aplcorr','apltran','aplmap','zipping']
+
 # Now go through all variables and check if they should be overwritten
 # by an environmental variable of the same name.
 for env_var in dir():
@@ -173,3 +183,7 @@ for env_var in dir():
 if TEMP_PROCESSING_DIR == "":
     #whether to process on local file system of gridnodes
     TEMP_PROCESSING = False
+
+if DB_LOCATION == "":
+    #whether to append outputs to a database
+    USE_DB = False

@@ -35,3 +35,12 @@ export TEMP_PROCESSING_DIR="" # Directory for local temporary processing (if not
 export QSUB_SYSTEM=bsub  # System to use for submitting jobs, e.g, bsub, qsub, or local for local processing
 export QUEUE=short-serial # Queue to use for jobs
 ```
+
+
+## Plugins ##
+
+Follow these instructions to add plugins for further processing options:
+
+1. Add a python script in to plugins directory. This will be picked up by the SCOPS front-end and added into the band math further processing page for selection.
+ - the plugin must have a function called run which does all the processing and returns the processed data filename
+2. Edit the plugin_args dictionary in scops_process_apl_line.py to add any keyword arguments required for the plugin run function

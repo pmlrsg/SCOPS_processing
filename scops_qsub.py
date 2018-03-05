@@ -207,6 +207,7 @@ def web_qsub(config, job_submission_system="local", output=None):
     for line in lines:
         link = scops_common.LINE_LINK.format(os.path.basename(os.path.normpath(output_location)), line, defaults["project_code"])
         status_db.insert_line_into_db(os.path.basename(os.path.normpath(output_location)), line, "Waiting to process", 0, 0, 0, 0, link, 0, 0)
+
         status_file = scops_common.STATUS_FILE.format(output_location, line)
         log_file = scops_common.LOG_FILE.format(output_location, line)
         if "true" in dict(config_file.items(line))["process"]:
@@ -215,18 +216,23 @@ def web_qsub(config, job_submission_system="local", output=None):
         else:
             open(status_file, 'w+').write("{} = {}".format(line, "not processing"))
         equations = [x for x in dict(config_file.items('DEFAULT')) if "eq_" in x]
+        plugins = [x for x in dict(config.items('DEFAULT')) if "plugin_" in x]
+        extensions =  plugins + equations
         #if equations exist we should do something with them
-        if len(equations) > 0:
-            for equation in equations:
-                if config_file.has_option(line, equation):
-                    if config_file.get(line, equation) in "True":
+        if len(extensions) > 0:
+            for extension in extensions:
+                if config_file.has_option(line, extension):
+                    if config_file.getboolean(line, extension):
+                        extension_nice = extension.replace("eq_", "_").replace("plugin_", "_")
                         #build a load of band math status amd log files
-                        bm_status_file = scops_common.STATUS_FILE.format(output_location, line + equation.replace("eq_", "_"))
-                        bm_log_file =  scops_common.LOG_FILE.format(output_location, line + equation.replace("eq_", "_"))
+                        extension_status_file = scops_common.STATUS_FILE.format(output_location, line + extension_nice)
+                        extension_log_file =  scops_common.LOG_FILE.format(output_location, line + extension_nice)
 
+                        link = scops_common.LINE_LINK.format(os.path.basename(os.path.normpath(output_location)), line + extension_nice, defaults["project_code"])
+                        status_db.insert_line_into_db(os.path.basename(os.path.normpath(output_location)), line + extension_nice, "Waiting to process", 0, 0, 0, 0, link, 0, 0)
                         #open status and log files
-                        open(bm_status_file, 'w+').write("{} = {}".format((line + equation.replace("eq_", "_")), "waiting"))
-                        open(bm_log_file, mode="a").close()
+                        open(extension_status_file, 'w+').write("{} = {}".format((line + extension_nice), "waiting"))
+                        open(extension_log_file, mode="a").close()
 
     if (not config_file.getboolean('DEFAULT', 'status_email_sent')) or (new_location):
         scops_process_apl_line.email_status(defaults["email"], output_location, defaults["project_code"])

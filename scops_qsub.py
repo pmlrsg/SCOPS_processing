@@ -216,7 +216,7 @@ def web_qsub(config, job_submission_system="local", output=None):
         else:
             open(status_file, 'w+').write("{} = {}".format(line, "not processing"))
         equations = [x for x in dict(config_file.items('DEFAULT')) if "eq_" in x]
-        plugins = [x for x in dict(config.items('DEFAULT')) if "plugin_" in x]
+        plugins = [x for x in dict(config_file.items('DEFAULT')) if "plugin_" in x]
         extensions =  plugins + equations
         #if equations exist we should do something with them
         if len(extensions) > 0:

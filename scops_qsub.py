@@ -205,8 +205,8 @@ def web_qsub(config, job_submission_system="local", output=None):
 
     #Generate a status file for each line to be processed, these are important later!
     for line in lines:
-        link = scops_common.LINE_LINK.format(output_location, line, defaults["project_code"])
-        status_db.insert_line_into_db(output_location, line, "Waiting to process", 0, 0, 0, 0, link, 0, 0)
+        link = scops_common.LINE_LINK.format(os.path.basename(os.path.normpath(output_location)), line, defaults["project_code"])
+        status_db.insert_line_into_db(os.path.basename(os.path.normpath(output_location)), line, "Waiting to process", 0, 0, 0, 0, link, 0, 0)
         status_file = scops_common.STATUS_FILE.format(output_location, line)
         log_file = scops_common.LOG_FILE.format(output_location, line)
         if "true" in dict(config_file.items(line))["process"]:

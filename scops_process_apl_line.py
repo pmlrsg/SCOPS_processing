@@ -573,7 +573,10 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
     
     if not resume:
         link = scops_common.LINE_LINK.format(processing_id, output_line_name, line_details["project_code"])
-        status_db.insert_line_into_db(processing_id, output_line_name, "Waiting to process", 0, 0, 0, 0, link, 0, 0)
+        try:
+            status_db.insert_line_into_db(processing_id, output_line_name, "Waiting to process", 0, 0, 0, 0, link, 0, 0)
+        except:
+            pass
         #in case we've already run it once
         status_update(processing_id, status_file, "Waiting to process", output_line_name)
     try:

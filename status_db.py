@@ -27,6 +27,7 @@ def insert_line_into_db(processing_id, name, stage, progress, filesize, bytesize
     :param zipsize: int
     :param zipbyte: string
     """
+    print "inserting {}".format(name)
     conn = sqlite3.connect(scops_common.DB_LOCATION)
     c = conn.cursor()
     c.execute('INSERT INTO flightlines VALUES (NULL,?,?,?,?,?,?,?,?,?,?)', [processing_id,

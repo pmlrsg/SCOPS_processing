@@ -588,7 +588,11 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
         logger.error(e)
     
     if resume:
-        resume_stage = status_db.get_line_status_from_db(processing_id, output_line_name)
+        try:
+            resume_stage = status_db.get_line_status_from_db(processing_id, output_line_name)
+        except:
+            link = scops_common.LINE_LINK.format(processing_id, output_line_name, line_details["project_code"])
+            status_db.insert_line_into_db(processing_id, output_line_name, "Waiting to process", 0, 0, 0, 0, link, 0, 0)
         start_stage = status_to_number(resume_stage)
     else:
         start_stage = 0
@@ -878,10 +882,10 @@ if __name__ == '__main__':
                         help='process main line',
                         action="store_true",
                         dest="bandmath")
-    parser.add_argument('--noresume',
-                        '-n',
-                        help="don't try to pick up where we left off",
+    parser.add_argument('--resume',
+                        '-r',
+                        help="Try to pick up where we left off",
                         action="store_true",
                         dest="noresume")
     args = parser.parse_args()
-    line_handler(args.config, args.line, args.output, args.main, args.bandmath, resume=(not args.noresume))
+    line_handler(args.config, args.line, args.output, args.main, args.bandmath, resume=args.resume)

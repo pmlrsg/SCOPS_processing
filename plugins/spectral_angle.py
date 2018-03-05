@@ -104,7 +104,7 @@ def create_classification_mask(angles):
 
     return classification
 
-def run(output_folder=None,hsi_filename=None,refspectra=None,filetype="ENVI",hsi_wavelengths=None):
+def run(output_folder=None,hsi_filename=None,refspectra=os.path.join(os.path.dirname(__file__),"ref_spectra/ref_spectra.txt"),filetype="ENVI",hsi_wavelengths=None):
     """
     Function to run the spectral angle classifier. This is the one that is called from SCOPS processor.
 
@@ -206,6 +206,5 @@ if __name__=="__main__":
                         default=os.path.join(os.path.dirname(__file__),"ref_spectra/ref_spectra.txt"),
                         metavar="<filename>")
     args = parser.parse_args()
-
 
     run(output_folder=args.output_folder,hsi_filename=args.hsifilename,refspectra=args.refspectra)

@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /users/rsg/arsf/web_processing/scops_conda/conda/envs/scops/bin/python
 
 ###########################################################
 # This file has been created by the NERC-ARF Data Analysis Node and

@@ -72,6 +72,7 @@ class QsubJobSubmission(JobSubmission):
         qsub_args.extend(["-o", scops_common.QSUB_LOG_DIR])
         qsub_args.extend(["-m", "n"]) # Don't send mail
         qsub_args.extend(["-b", "y"])
+        qsub_args.extend(["-V"])
         qsub_args.extend(["-l", "apl_throttle=1"])
         qsub_args.extend(["-l", "apl_web_throttle=1"])
         try:

@@ -1,4 +1,5 @@
-#! /usr/bin/env python
+#! /users/rsg/arsf/web_processing/scops_conda/conda/envs/scops/bin/python
+
 ###########################################################
 # This file has been created by NERC-ARF Data Analysis Node and
 # is licensed under the GPL v3 Licence. A copy of this
@@ -424,7 +425,19 @@ def status_update(processing_folder, status_file, newstage, line):
     :return:
     """
     if scops_common.USE_DB:
-        status_db.update_status(processing_folder, line, newstage)
+        failure=None
+        number_of_attempts=0
+        while (failure is None or failure is True) and number_of_attempts<10:
+            try:
+                status_db.update_status(processing_folder, line, newstage)
+                failure=False
+            except Exception as exc:
+                failure=True
+
+            number_of_attempts+=1
+        if number_of_attempts >= 10:
+            raise Exception("Could not update status - attempted 1000 times. Last exception was: {}".format(exc))
+
     open(status_file, 'w').write("{} = {}".format(line, newstage))
 
 
@@ -521,7 +534,7 @@ def line_handler(config_file, line_name, output_location, process_main_line, pro
                 #always do all bands
                 band_list="ALL"
                 #do not do masking as the mask does not match this file anymore. Potentially should apply mask first before running the plugin
-                skip_stages=['masking']
+                skip_stages=['aplmask']
                 if enum == len(plugins)-1:
                     last_process = True
                 process_web_hyper_line(config, line_name, os.path.basename(processed_file), band_list, output_location, lev1file, hyper_delivery, input_lev1_file=processed_file, skip_stages=skip_stages,maskfile=None, eq_name=polite_plugin_name, last_process=last_process, tmp=tmp_process, resume=False)
@@ -599,6 +612,8 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
         start_stage = status_to_number(resume_stage)
     else:
         start_stage = 0
+        for st in skip_stages:
+            start_stage = max(start_stage,status_to_number(st))
 
     jday = "{0:03d}".format(int(line_details["julianday"]))
 
@@ -664,7 +679,10 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
 
     atexit.register(writeback, line_processing_details)
     
-    if not "masking" in skip_stages or start_stage <= 1:
+    if "aplmask" in skip_stages:
+        #skip the masking
+        masked_file = input_lev1_file
+    elif start_stage <= 1:
         #set new status to masking
         status_update(processing_id, status_file, "aplmask", output_line_name)
         if not 'none' in line_details['masking']:

@@ -1,4 +1,4 @@
-#! /users/rsg/arsf/web_processing/scops_conda/conda/envs/scops/bin/python
+#!/usr/bin/env python
 
 """
 Setup script for scops

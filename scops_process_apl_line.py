@@ -653,6 +653,8 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
         projection = pipes.quote("utm_wgs84{}_{}".format(hemisphere, zone))
     elif "UKBNG" in line_details["projection"]:
         projection = "osng"
+    elif "proj_string" in line_details["projection"]:
+        projection= "user"
     else:
         logger.error("Couldn't find the projection from input string")
         status_update(processing_id, status_file, "ERROR - projection not identified", output_line_name)
@@ -753,6 +755,8 @@ def process_web_hyper_line(config, base_line_name, output_line_name, band_list, 
             apltran_cmd.extend(["-outproj", "utm_wgs84{}".format(hemisphere), zone])
         elif "osng" in projection:
             apltran_cmd.extend(["-outproj", "osng", scops_common.OSNG_SEPERATION_FILE])
+        elif projection=="user":
+            apltran_cmd.extend(["-outprojstr", line_details["projstring"]])
 
         try:
             dem_common_functions.CallSubprocessOn(apltran_cmd, redirect=False, logger=logger)

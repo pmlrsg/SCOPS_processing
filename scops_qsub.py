@@ -205,12 +205,11 @@ def web_qsub(config, job_submission_system="local", output=None):
 
     #Generate a status file for each line to be processed, these are important later!
     for line in lines:
-        link = scops_common.LINE_LINK.format(os.path.basename(os.path.normpath(output_location)), line, defaults["project_code"])
-        status_db.insert_line_into_db(os.path.basename(os.path.normpath(output_location)), line, "Waiting to process", 0, 0, 0, 0, link, 0, 0)
-
         status_file = scops_common.STATUS_FILE.format(output_location, line)
         log_file = scops_common.LOG_FILE.format(output_location, line)
         if "true" in dict(config_file.items(line))["process"]:
+            link = scops_common.LINE_LINK.format(os.path.basename(os.path.normpath(output_location)), line, defaults["project_code"])
+            status_db.insert_line_into_db(os.path.basename(os.path.normpath(output_location)), line, "Waiting to process", 0, 0, 0, 0, link, 0, 0)
             open(status_file, 'w+').write("{} = {}".format(line, "waiting"))
             open(log_file, mode="a").close()
         else:
@@ -273,9 +272,10 @@ def web_qsub(config, job_submission_system="local", output=None):
             # if they want the band ratiod file we should submit it
             band_ratio = True
 
-        # Submit job
-        job_obj.submit(config, line, output_location, filesizes,
-                       main_line, band_ratio)
+        if main_line or band_ratio:
+            # Submit job
+            job_obj.submit(config, line, output_location, filesizes,
+                        main_line, band_ratio)
 
     logger.info("all lines complete")
 

@@ -223,7 +223,13 @@ def web_qsub(config, job_submission_system="local", output=None):
         if len(extensions) > 0:
             for extension in extensions:
                 if config_file.has_option(line, extension):
-                    if config_file.getboolean(line, extension):
+                    try:
+                        boolvar=config_file.getboolean(line, extension)
+                    except ValueError:
+                        #not a boolean - ignore this item
+                        continue
+
+                    if boolvar:
                         extension_nice = extension.replace("eq_", "_").replace("plugin_", "_")
                         #build a load of band math status amd log files
                         extension_status_file = scops_common.STATUS_FILE.format(output_location, line + extension_nice)

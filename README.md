@@ -1,5 +1,18 @@
 # The Simple Concurrent Online Processing System (SCOPS) #
 
+## About ##
+
+Backend code for SCOPS. For a full description see the following paper:
+
+M.A. Warren, S. Goult, D. Clewley,
+The Simple Concurrent Online Processing System (SCOPS) - An open-source interface for remotely sensed data processing,
+Computers & Geosciences,
+Volume 115,
+2018,
+Pages 188-197,
+ISSN 0098-3004,
+https://doi.org/10.1016/j.cageo.2018.03.013.
+
 ## Installation ##
 
 ### Pre-requsites ###
